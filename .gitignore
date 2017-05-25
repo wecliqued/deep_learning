@@ -99,3 +99,9 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# PyCharm stuff
+.idea/
+
+# ignore data as well :)
+data/
