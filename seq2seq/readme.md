@@ -40,13 +40,21 @@ The steps are as follows:
    ?JIg1}`"vlG	7f&n_č3iO"*=V.9h^RMt.s!=]LćN'E%AČG;a]Gč*Q&Če7đlzl6	@{CWiBžO~r$:`B	<e:GtWž ZW^W`0esnrć&sB0*](0^+PP<n9U:0Mn9{m%K	2-SM
    :jtDS(#tĆ\~ZwYj.;
    ``` 
+
+5. Open tensorboard and monitor training using the following command:
+
+   ```
+   > tensorboard --logdir graphs/ &
+   Starting TensorBoard b'52' at http://localhost:6006
+   ```
+   Open `http://localhost:6006` in browser and there you can monitor training progress.
    
-5. The notebook is setup to cross validate different architectures of the network by varying the number of stacked cells
+6. The notebook is setup to cross validate different architectures of the network by varying the number of stacked cells
    and the number of neurons inside individual GRU cells. Unless you are running Tensorflow on GPU, that will take a way
    too long to finish :) The optimal parameters for this dataset is 3 stacked layers with 512 neurons each, try that if
    you are running on CPU only.
     
-6. The model can be used to analyse and predict any kind of sequences. Try feeding it with different data.
+7. The model can be used to analyse and predict any kind of sequences. Try feeding it with different data.
 
 ## Exercise 2
 
