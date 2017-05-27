@@ -330,7 +330,6 @@ class TestSeq2Seq(TestCase):
         hidden_size = self.hidden_size
 
         # create network
-        seq2seq.input_file_name = 'input_file_name_for_testing'
         seq2seq.create_net(0.1, 10, 0.99)
 
         # check that all variables are created

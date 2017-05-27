@@ -38,7 +38,7 @@ class Seq2Seq:
         # if input is not provided, we will open a file and read all data into it
         # this should work for "small" datasets - 100MB is small :)
         if not input:
-            with open(self.input_file_name) as f:
+            with open(self.input_file_name, encoding='utf-8') as f:
                 input = f.read()
 
         seq = self.vocab_encode(input)
@@ -331,7 +331,10 @@ class Seq2Seq:
 
     # used to generate names for checkpoints (needs refactoring)
     def _model_extension(self):
-        dataset_name = os.path.basename(self.input_file_name)
+        if self.input_file_name:
+            dataset_name = os.path.basename(self.input_file_name)
+        else:
+            dataset_name = 'dummy_dataset'
         return '-{}'.format(dataset_name)
 
     def _arch_extension(self):
