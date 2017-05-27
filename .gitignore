@@ -104,4 +104,7 @@ ENV/
 .idea/
 
 # ignore data as well :)
-data/
+seq2seq/data/*
+seq2seq/graphs/*
+seq2seq/checkpoints/*
+.DS_Store
