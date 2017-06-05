@@ -28,8 +28,8 @@ print(dateCollection)
 print(classCollection)
 '''
 
-classMap = classReplacement(classCollection)
-dataMap = dateReplacement(dateCollection)
+classMap = class_replacement(classCollection)
+dataMap = date_replacement(dateCollection)
 
 
 #filehandle = open('/home/developer/Desktop', 'rb')

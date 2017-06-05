@@ -1,7 +1,7 @@
 from decimal import Decimal
 from datetime import datetime
 
-def classReplacement(classArray):
+def class_replacement(classArray):
     newArray = []
     for i in classArray:
         if len(newArray) == 0:
@@ -20,7 +20,7 @@ def classReplacement(classArray):
         map[newArray[x]] = val
     return map
 
-def dateReplacement(dateArray):
+def date_replacement(dateArray):
     newArray = []
     firstDate = 0
     for i in dateArray:
