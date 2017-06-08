@@ -8,7 +8,7 @@ import math
 class RepslyData:
     def __init__(self, file_name):
         self.file_name = file_name
-        self.data_array = [] #todo: make local
+        self.data_array = None
         self.final_array = np.ndarray
         self.edition_ix = 2
         self.first_date = '2016-1-1'
@@ -87,10 +87,15 @@ class RepslyData:
                 # check every other row
                 else:
                     row_arr = self.read_row_from_file(row)
-                    self.data_array.append(row_arr)
+                    print('self.data_array:', self.data_array)
+                    print('row_arr:', row_arr)
+                    if self.data_array is None:
+                        self.data_array = np.array([row_arr])
+                    else:
+                        self.data_array = np.append(self.data_array, [row_arr], axis=0)
 
-                if i % 100:
-                    print('row: ', i*100)
+                if i % 100 == 0:
+                    print('row: ', i)
                 i = i + 1
         self.final_array = np.asarray(self.data_array)
         return np.asarray(self.data_array)
