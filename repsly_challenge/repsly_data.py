@@ -6,42 +6,8 @@ import math
 # ideja: treba nam funkcija koja cita batch
 
 class RepslyData:
-    def __init__(self, file_name):
-        self.file_name = file_name
-        self.data_array = None
-        self.final_array = np.ndarray
-        self.edition_ix = 2
-        self.first_date = '2016-1-1'
+    def __init__(self):
         pass
-
-    def get_full_array(self):
-        return self.data_array
-
-    def get_classes_from_file(self):
-        x = dict()
-        number = 0
-        # todo 1: otvori fajl, procitaj sve u ix stupcu i vrati skup razlicitih stringova
-        # open and read csv, store all found values for classes and assign them with appropriate number
-        with open(self.file_name) as csvfile:
-            mycsv = csv.reader(csvfile)
-            isFirstLine = True
-            isFound = False
-            for row in mycsv:
-                # check first line
-                isFound=False
-                if isFirstLine:
-                    isFirstLine = False
-                else:
-                    key = row[2]
-                    #date = row[3]
-                    #if date < self.first_date:
-                    #    self.first_date = date
-                    if key in x.keys():
-                        isFound = True
-                    if not isFound:
-                        x[key] = number
-                        number += 1
-        return x
 
     def _string_to_datetime(self, s):
         return datetime.strptime(s, '%Y-%m-%d')
@@ -49,113 +15,85 @@ class RepslyData:
     def _string_to_days(self, s, first_date):
         return (self._string_to_datetime(s) - self._string_to_datetime(first_date)).days
 
-    def read_row_from_file(self, row):
-        encoded_row = []
-        # todo 2: sve castaj u integer, neke razvuci u one hot vektor
-        position = 0
-        for element in row:
-            if position == 2:
-                classes_ids = self.get_classes_from_file()
-                arr = [0, 0, 0, 0]
-                arr[len(arr) - 1 - classes_ids.get(element)] = 1
-                encoded_row = encoded_row + arr
-            elif position == 3:
-                day = self._string_to_days(element, self.first_date)
-                encoded_row.append(day)
-            else:
-                if position == 1:
-                    bought = int(element)
-                else:
-                    encoded_row.append(int(element))
-            position += 1
-        if len(encoded_row) > 0:
-            encoded_row.append(bought)
-        return encoded_row
+    def _prepare_data_for_plain_nn(self, file_name):
+        self.X_all, self.y_all = None, None
+        with open(file_name) as f:
+            mycsv = csv.reader(f)
+            for X, y in self._read_user_data(mycsv):
+                X_row = np.reshape(X, [-1])
+                if self.X_all is None:
+                    self.X_all = np.zeros([0, X_row.shape[0]])
+                    self.y_all = np.array([0, 1])
+                self.X_all = np.concatenate([self.X_all, [X_row]])
+                self.y_all = np.concatenate([self.y_all, [y]])
 
-    # todo 3> popravi sto smo strgali
-    def read_from_file(self):
-        editions = self.get_classes_from_file()
-
-        i = 0
-        with open(self.file_name) as csvfile:
-            mycsv = csv.reader(csvfile)
-            isFirstLine = True
-            for row in mycsv:
-                # check first line
-                if isFirstLine:
-                    isFirstLine = False
-                # check every other row
-                else:
-                    row_arr = self.read_row_from_file(row)
-                    print('self.data_array:', self.data_array)
-                    print('row_arr:', row_arr)
-                    if self.data_array is None:
-                        self.data_array = np.array([row_arr])
-                    else:
-                        self.data_array = np.append(self.data_array, [row_arr], axis=0)
-
-                if i % 100 == 0:
-                    print('row: ', i)
-                i = i + 1
-        self.final_array = np.asarray(self.data_array)
-        return np.asarray(self.data_array)
-
-    # def normalize_column(self, x, ix):
-    #     '''
-    #
-    #     :param x: numpy 2D arrray
-    #     :param ix: index of column
-    #     '''
-    #     mean = np.mean(x, axis=0)[ix]
-    #     std = np.std(x, axis=0)[ix]
-    #     x[:, ix] = (x[:, ix] - mean) / std
-
-    def prepare_data_for_plain_nn(self, data, num_of_entries_per_id):
-        num_of_trials = data.shape[0] // num_of_entries_per_id
-        num_of_columns = data.shape[1]
-        num_of_repeating_features = num_of_columns-8
-        X = np.zeros([num_of_trials, 5+num_of_entries_per_id*num_of_repeating_features], dtype=np.int)
-        y = np.zeros([num_of_trials])
-
-        data_reshaped = np.reshape(data, [num_of_trials, -1])
-        y = data_reshaped[:, -1]
-        X[:, 0:4] = data_reshaped[:, 1:5]
-        X[:, 4] = data_reshaped[:, 5]
-        for i in range(num_of_entries_per_id):
-            features = data_reshaped[:, i * num_of_columns + 7:i * (num_of_columns) + 7 + num_of_repeating_features]
-            if i is 0:
-                X[:, i*num_of_repeating_features+5:(i+1)*(num_of_repeating_features)+5] = features
-            else:
-                X[:, i*num_of_repeating_features+5:(i+1)*(num_of_repeating_features)+5] = features - last_features
-            last_features = features
-
-        return X, y
-
-    def read_data_for_plain_nn(self):
-        data = self.read_from_file()
-        X, y = self.prepare_data_for_plain_nn(data, 16)
-        no_of_data = X.shape[0]
-        no_of_train_data = int(no_of_data * 0.9)
-        no_of_validation_data = int(no_of_data * 0.1)
+    def read_data_for_plain_nn(self, file_name, train_size=0.8):
+        self._prepare_data_for_plain_nn(file_name)
+        no_of_data = self.X_all.shape[0]
+        no_of_train_data = int(no_of_data * train_size)
+        no_of_validation_data = int(no_of_data * ((1.0-train_size) / 2))
 
         np.random.seed(0)
         ix = np.random.permutation(no_of_data)
 
         self.X, self.y = {}, {}
 
-        self.X['train'] = X[ix[:no_of_train_data], :]
-        self.y['train'] = y[ix[:no_of_train_data]]
+        self.X['train'] = self.X_all[ix[:no_of_train_data], :]
+        self.y['train'] = self.y_all[ix[:no_of_train_data]]
 
-        self.X['validation'] = X[ix[no_of_train_data:no_of_train_data+no_of_validation_data], :]
-        self.y['validation'] = y[ix[no_of_train_data:no_of_train_data+no_of_validation_data]]
+        self.X['validation'] = self.X_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data], :]
+        self.y['validation'] = self.y_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data]]
 
-        self.X['test'] = X[ix[no_of_train_data:no_of_train_data+no_of_validation_data:], :]
-        self.y['test'] = y[ix[no_of_train_data:no_of_train_data+no_of_validation_data:]]
+        self.X['test'] = self.X_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data:], :]
+        self.y['test'] = self.y_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data:]]
 
-    def read_batch(self, batch_size, data_set='train'):
+    def read_batch_for_plain_nn(self, batch_size, data_set='train'):
         no_of_data = self.X[data_set].shape[0]
         X, y = self.X[data_set], self.y[data_set]
 
         for i in range(no_of_data // batch_size):
             yield X[i * batch_size:(i + 1) * batch_size, :], \
                   y[i * batch_size:(i + 1) * batch_size]
+
+
+    def _convert_row_to_int(self, columns_dict, data_indexes, trial_started, row, first_date):
+        # convert all strings into int
+        row_data = np.zeros_like(row, dtype=int)
+        for i in data_indexes:
+            if i is columns_dict[trial_started]:
+                # convert Date to int
+                row_data[i] = self._string_to_days(row[i], first_date)
+            else:
+                row_data[i] = int(row[i])
+        return row_data
+
+    def _read_user_data(self, mycsv, num_of_rows=16, user_columns='UserID', day_column='TrialDate', trial_started='TrialStarted', purchased_column='Purchased', ignore_columns=['Edition'], first_date='2016-01-01'):
+        columns = next(mycsv)
+        columns_dict = {columns[i]: i for i in range(len(columns))}
+
+        num_of_columns = len(columns) - len(ignore_columns) - 3 # UserID, Purchased, TrialDate
+
+        data_columns = [c for c in columns if c not in (np.concatenate([ignore_columns, [user_columns, day_column, purchased_column]]))]
+        data_indexes = [columns_dict[c] for c in data_columns]
+
+        X, y = None, 0
+
+        for row in mycsv:
+            day = int(row[columns_dict[day_column]])
+            if  day is 0:
+                # yield if you have something
+                if X is not None:
+                    yield X, y
+
+                # allocate and initialize new output data
+                X = np.zeros([num_of_rows, num_of_columns])
+                y = int(row[columns_dict['Purchased']])
+
+            row_data = self._convert_row_to_int(columns_dict, data_indexes, trial_started, np.array(row), first_date)
+
+            X[day] = row_data[data_indexes]
+
+        if X is not None:
+            yield X, y
+
+        return
