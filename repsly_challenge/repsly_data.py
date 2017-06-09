@@ -23,7 +23,7 @@ class RepslyData:
                 X_row = np.reshape(X, [-1])
                 if self.X_all is None:
                     self.X_all = np.zeros([0, X_row.shape[0]])
-                    self.y_all = np.array([0, 1])
+                    self.y_all = np.array([], dtype=np.int)
                 self.X_all = np.concatenate([self.X_all, [X_row]])
                 self.y_all = np.concatenate([self.y_all, [y]])
 
@@ -77,23 +77,19 @@ class RepslyData:
         data_indexes = [columns_dict[c] for c in data_columns]
 
         X, y = None, 0
-
         for row in mycsv:
             day = int(row[columns_dict[day_column]])
-            if  day is 0:
+            if day is 0:
                 # yield if you have something
                 if X is not None:
                     yield X, y
-
                 # allocate and initialize new output data
-                X = np.zeros([num_of_rows, num_of_columns])
+                X = np.zeros([num_of_rows, num_of_columns], dtype=np.int)
                 y = int(row[columns_dict['Purchased']])
 
             row_data = self._convert_row_to_int(columns_dict, data_indexes, trial_started, np.array(row), first_date)
-
             X[day] = row_data[data_indexes]
+
 
         if X is not None:
             yield X, y
-
-        return
