@@ -13,6 +13,7 @@ class TestRepslyData(TestCase):
         self.array = np.ndarray
         self.file_name = 'data/trial_users_analysis.csv'
         self.two_users_file = 'data/trial_two_users.csv'
+        self.ten_users_file = 'data/trial_ten_users.csv'
 
         self.repsly_data = RepslyData()
 
@@ -48,7 +49,7 @@ class TestRepslyData(TestCase):
         row_data = repsly_data._convert_row_to_int(columns_dict, data_indexes, trial_started, row, first_date)
         np.testing.assert_array_equal(row_data, expected_row_data)
 
-    def test_read_user_data(self):
+    def test_read_user_data_fast(self):
         repsly_data = self.repsly_data
 
         file_name = self.two_users_file
@@ -71,17 +72,17 @@ class TestRepslyData(TestCase):
             expected_sweetsixteen_row = [2,245,45,0,0,362,7265,0,0,0,0,242,0,0,0,66]
             np.testing.assert_array_equal(X[15], expected_sweetsixteen_row)
 
+    def test_read_user_data_slow(self):
+        repsly_data = self.repsly_data
+
         file_name = self.file_name
 
         with open(file_name) as f:
             for X, y in repsly_data._read_user_data(csv.reader(f)):
                 np.testing.assert_array_equal(X.shape, [16, 16])
 
-    def test_read_data_for_plain_nn(self):
+    def _test_read_data_for_plain_nn(self, file_name, no_of_lines):
         repsly_data = self.repsly_data
-
-#        file_name = self.file_name
-        file_name = self.two_users_file
 
 
         self.assertFalse(hasattr(repsly_data, 'X_all'))
@@ -91,16 +92,43 @@ class TestRepslyData(TestCase):
         self.assertIsNotNone(repsly_data.X_all)
         self.assertIsInstance(repsly_data.X_all, np.ndarray)
         X_all_shape = np.shape(repsly_data.X_all)
-#        self.assertGreaterEqual(X_all_shape[0], 103456 // 16)
+        self.assertGreaterEqual(X_all_shape[0], no_of_lines // 16)
         np.testing.assert_array_equal(X_all_shape[1], 16*16)
         np.testing.assert_array_equal(repsly_data.y_all.shape, [X_all_shape[0]])
 
+    def test_read_data_for_plain_nn_fast(self):
+        file_name = self.two_users_file
+        no_of_lines = 31
+        self._test_read_data_for_plain_nn(file_name, no_of_lines)
 
+    def test_read_data_for_plain_nn_slow(self):
+        file_name = self.file_name
+        no_of_lines = 103456
+        self._test_read_data_for_plain_nn(file_name, no_of_lines)
 
-    def test_read_batch(self):
+    def test_read_batch_fast(self):
         repsly_data = self.repsly_data
+        file_name = self.ten_users_file
 
-        for X, y in repsly_data.read_batch(batch_size=5, data_set='train'):
-            np.testing.assert_array_equal(X.shape, [5, 277])
-            np.testing.assert_array_equal(y.shape, [5])
+        repsly_data.read_data_for_plain_nn(file_name)
+
+        i = 0
+        for X, y in repsly_data.read_batch_for_plain_nn(batch_size=4, data_set='train'):
+            np.testing.assert_array_equal(X.shape, [4, 16*16])
+            np.testing.assert_array_equal(y.shape, [4])
+            i = i + 1
+        self.assertEqual(i, 2)
+
+    def test_read_batch_slow(self):
+        repsly_data = self.repsly_data
+        file_name = self.file_name
+
+        repsly_data.read_data_for_plain_nn(file_name)
+
+        i = 0
+        for X, y in repsly_data.read_batch_for_plain_nn(batch_size=4, data_set='train'):
+            np.testing.assert_array_equal(X.shape, [4, 16*16])
+            np.testing.assert_array_equal(y.shape, [4])
+            i = i + 1
+        self.assertGreaterEqual(i, 0.8 * 103456 // (4 * 16))
 
