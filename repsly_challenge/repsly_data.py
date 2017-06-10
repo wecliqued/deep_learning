@@ -33,6 +33,8 @@ class RepslyData:
         num_of_columns = len(columns) - len(ignore_columns) - 3 # UserID, Purchased, TrialDate
 
         data_columns = [c for c in columns if c not in (np.concatenate([ignore_columns, [user_columns, day_column, purchased_column]]))]
+        # check that trial_started is the first column
+        assert(data_columns[0] == trial_started)
         data_indexes = [columns_dict[c] for c in data_columns]
 
         X, y = None, 0
@@ -49,7 +51,6 @@ class RepslyData:
             row_data = self._convert_row_to_int(columns_dict, data_indexes, trial_started, np.array(row), first_date)
             X[day] = row_data[data_indexes]
 
-
         if X is not None:
             yield X, y
 
@@ -58,7 +59,11 @@ class RepslyData:
         with open(file_name) as f:
             mycsv = csv.reader(f)
             for X, y in self._read_user_data(mycsv):
-                X_row = np.reshape(X, [-1])
+                # the first column is a trial start day and there is no need to repeat it
+                # the rest are columns that are possibly different each day and we will flatten them
+                trial_start_day = X[0, 0]
+                repeating_columns =  np.reshape(X[:, 1:], [-1])
+                X_row = np.concatenate([[trial_start_day], repeating_columns])
                 if self.X_all is None:
                     self.X_all = np.zeros([0, X_row.shape[0]])
                     self.y_all = np.array([], dtype=np.int)

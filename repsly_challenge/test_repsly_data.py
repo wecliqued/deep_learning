@@ -93,7 +93,7 @@ class TestRepslyData(TestCase):
         self.assertIsInstance(repsly_data.X_all, np.ndarray)
         X_all_shape = np.shape(repsly_data.X_all)
         self.assertGreaterEqual(X_all_shape[0], no_of_lines // 16)
-        np.testing.assert_array_equal(X_all_shape[1], 16*16)
+        np.testing.assert_array_equal(X_all_shape[1], 1+15*16)
         np.testing.assert_array_equal(repsly_data.y_all.shape, [X_all_shape[0]])
 
     def test_read_data_for_plain_nn_fast(self):
@@ -114,7 +114,7 @@ class TestRepslyData(TestCase):
 
         i = 0
         for X, y in repsly_data.read_batch_for_plain_nn(batch_size=4, data_set='train'):
-            np.testing.assert_array_equal(X.shape, [4, 16*16])
+            np.testing.assert_array_equal(X.shape, [4, 1+15*16])
             np.testing.assert_array_equal(y.shape, [4])
             i = i + 1
         self.assertEqual(i, 2)
@@ -127,7 +127,7 @@ class TestRepslyData(TestCase):
 
         i = 0
         for X, y in repsly_data.read_batch_for_plain_nn(batch_size=4, data_set='train'):
-            np.testing.assert_array_equal(X.shape, [4, 16*16])
+            np.testing.assert_array_equal(X.shape, [4, 1+15*16])
             np.testing.assert_array_equal(y.shape, [4])
             i = i + 1
         self.assertGreaterEqual(i, 0.8 * 103456 // (4 * 16))
