@@ -80,8 +80,8 @@ class RepslyData:
                 else:
                     raise 'Unsupported mode {}, should be FC or CONV'.format(mode)
 
-    def read_data(self, file_name, train_size=0.8): # mode = 'FC' or 'CONV'
-        self._prepare_data_for_plain_nn(file_name, mode)
+    def read_data(self, file_name, mode, train_size=0.8):
+        self._prepare_data(file_name, mode) # mode = 'FC' or 'CONV'
         no_of_data = self.X_all.shape[0]
         no_of_train_data = int(no_of_data * train_size)
         no_of_validation_data = int(no_of_data * ((1.0-train_size) / 2))

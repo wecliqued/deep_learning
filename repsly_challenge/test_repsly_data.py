@@ -81,54 +81,77 @@ class TestRepslyData(TestCase):
             for X, y in repsly_data._read_user_data(csv.reader(f)):
                 np.testing.assert_array_equal(X.shape, [16, 16])
 
-    def _test_read_data_for_plain_nn(self, file_name, no_of_lines):
+    def _test_read_data(self, file_name, no_of_lines, mode):
         repsly_data = self.repsly_data
-
 
         self.assertFalse(hasattr(repsly_data, 'X_all'))
         self.assertFalse(hasattr(repsly_data, 'X'))
-        repsly_data.read_data_for_plain_nn(file_name)
-        self.assertIsNotNone(repsly_data.X)
+        repsly_data._prepare_data(file_name, mode)
+
+        repsly_data.read_data(file_name, 'FC')
+
+        self.assertIsNotNone(repsly_data.X)      # 'RepslyData' object has no attribute 'X' -> not defined as self.X
         self.assertIsNotNone(repsly_data.X_all)
         self.assertIsInstance(repsly_data.X_all, np.ndarray)
         X_all_shape = np.shape(repsly_data.X_all)
         self.assertGreaterEqual(X_all_shape[0], no_of_lines // 16)
-        np.testing.assert_array_equal(X_all_shape[1], 1+15*16)
-        np.testing.assert_array_equal(repsly_data.y_all.shape, [X_all_shape[0]])
 
-    def test_read_data_for_FC_mode(self):
+        if mode is 'FC':
+            np.testing.assert_array_equal(X_all_shape[1], 1+15*16)
+            np.testing.assert_array_equal(repsly_data.y_all.shape, [X_all_shape[0]])
+        elif mode is 'CONV':
+            np.testing.assert_array_equal(X_all_shape[1], [16, 16])
+            np.testing.assert_array_equal(repsly_data.y_all.shape, [X_all_shape[0]])
+        else:
+            raise 'TEST: Unsupported mode in {}, should be FC or CONV'.format(mode)
+
+    def test_prepare_data_fast_for_FC_mode(self):
         file_name = self.two_users_file
         no_of_lines = 31
-        self._test_read_data_for_plain_nn(file_name, no_of_lines)
+        self._test_read_data(file_name, no_of_lines, 'FC')
 
-    def test_read_data_for_FC_mode(self):
+    def test_prepare_data_slow_for_FC_mode(self):
         file_name = self.file_name
         no_of_lines = 103456
-        self._test_read_data_for_plain_nn(file_name, no_of_lines)
+        self._test_read_data(file_name, no_of_lines, 'FC')
+
+    def test_prepare_data_fast_for_CONV_model(self):
+        file_name = self.two_users_file
+        no_of_lines = 31
+        self._test_read_data(file_name, no_of_lines, 'CONV')
+
+    def test_prepare_data_slow_for_CONV_model(self):
+        file_name = self.file_name
+        no_of_lines = 103456
+        self._test_read_data(file_name, no_of_lines, 'CONV')
+
+    def test_read_batch(self,file_name, mode, length):
+        repsly_data = self.repsly_data
+
+        repsly_data._prepare_data(file_name, mode)
+        repsly_data.read_data(file_name, mode)
+        self.i = 0
+        for X, y in repsly_data.read_batch(batch_size=4, data_set='train'):
+            np.testing.assert_array_equal(X.shape, [4, 1+15*16])
+            np.testing.assert_array_equal(y.shape, [4])
+            self.i = self.i + 1
+        self.assertEqual(self.i, length)
 
     def test_read_batch_fast_for_FC_mode(self):
-        repsly_data = self.repsly_data
         file_name = self.ten_users_file
 
-        repsly_data.read_data_for_plain_nn(file_name)
-
-        i = 0
-        for X, y in repsly_data.read_batch_for_plain_nn(batch_size=4, data_set='train'):
-            np.testing.assert_array_equal(X.shape, [4, 1+15*16])
-            np.testing.assert_array_equal(y.shape, [4])
-            i = i + 1
-        self.assertEqual(i, 2)
+        self.test_read_batch(file_name,'FC', 2)
 
     def test_read_batch_slow_for_FC_mode(self):
-        repsly_data = self.repsly_data
         file_name = self.file_name
 
-        repsly_data.read_data_for_plain_nn(file_name)
+        self.test_read_batch(file_name, 'FC', (0.8 * 103456 // (4 * 16)))
 
-        i = 0
-        for X, y in repsly_data.read_batch_for_plain_nn(batch_size=4, data_set='train'):
-            np.testing.assert_array_equal(X.shape, [4, 1+15*16])
-            np.testing.assert_array_equal(y.shape, [4])
-            i = i + 1
-        self.assertGreaterEqual(i, 0.8 * 103456 // (4 * 16))
+    def test_read_batch_fast_for_CONV(self):
+        file_name = self.ten_users_file
 
+        self.test_read_batch(file_name, 'CONV', 2)
+
+    def test_read_batch_slow_for_CONV(self):
+        file_name = self.file_name
+        pass
