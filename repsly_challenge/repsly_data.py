@@ -54,24 +54,34 @@ class RepslyData:
         if X is not None:
             yield X, y
 
-    def _prepare_data_for_plain_nn(self, file_name):
+    def _prepare_data(self, file_name, mode):
         self.X_all, self.y_all = None, None
         with open(file_name) as f:
             mycsv = csv.reader(f)
             for X, y in self._read_user_data(mycsv):
                 # the first column is a trial start day and there is no need to repeat it
                 # the rest are columns that are possibly different each day and we will flatten them
-                trial_start_day = X[0, 0]
-                repeating_columns =  np.reshape(X[:, 1:], [-1])
-                X_row = np.concatenate([[trial_start_day], repeating_columns])
-                if self.X_all is None:
-                    self.X_all = np.zeros([0, X_row.shape[0]])
-                    self.y_all = np.array([], dtype=np.int)
-                self.X_all = np.concatenate([self.X_all, [X_row]])
-                self.y_all = np.concatenate([self.y_all, [y]])
+                if mode is 'FC':
+                    trial_start_day = X[0, 0]
+                    repeating_columns =  np.reshape(X[:, 1:], [-1])
+                    X_row = np.concatenate([[trial_start_day], repeating_columns])
+                    if self.X_all is None:
+                        self.X_all = np.zeros([0, X_row.shape[0]])
+                        self.y_all = np.array([], dtype=np.int)
+                    self.X_all = np.concatenate([self.X_all, [X_row]])
+                    self.y_all = np.concatenate([self.y_all, [y]])
+                elif mode is 'CONV':
+                    if self.X_all is None:
+                        X_all_shape = np.concatenate([[0], X.shape])
+                        self.X_all = np.zeros(X_all_shape)
+                        self.y_all = np.array([], dtype=np.int)
+                    self.X_all = np.concatenate([self.X_all, [X]])
+                    self.y_all = np.concatenate([self.y_all, [y]])
+                else:
+                    raise 'Unsupported mode {}, should be FC or CONV'.format(mode)
 
-    def read_data_for_plain_nn(self, file_name, train_size=0.8):
-        self._prepare_data_for_plain_nn(file_name)
+    def read_data(self, file_name, train_size=0.8): # mode = 'FC' or 'CONV'
+        self._prepare_data_for_plain_nn(file_name, mode)
         no_of_data = self.X_all.shape[0]
         no_of_train_data = int(no_of_data * train_size)
         no_of_validation_data = int(no_of_data * ((1.0-train_size) / 2))
@@ -90,7 +100,7 @@ class RepslyData:
         self.X['test'] = self.X_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data:], :]
         self.y['test'] = self.y_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data:]]
 
-    def read_batch_for_plain_nn(self, batch_size, data_set='train'):
+    def read_batch(self, batch_size, data_set='train'):
         no_of_data = self.X[data_set].shape[0]
         X, y = self.X[data_set], self.y[data_set]
 

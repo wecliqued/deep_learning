@@ -96,17 +96,17 @@ class TestRepslyData(TestCase):
         np.testing.assert_array_equal(X_all_shape[1], 1+15*16)
         np.testing.assert_array_equal(repsly_data.y_all.shape, [X_all_shape[0]])
 
-    def test_read_data_for_plain_nn_fast(self):
+    def test_read_data_for_FC_mode(self):
         file_name = self.two_users_file
         no_of_lines = 31
         self._test_read_data_for_plain_nn(file_name, no_of_lines)
 
-    def test_read_data_for_plain_nn_slow(self):
+    def test_read_data_for_FC_mode(self):
         file_name = self.file_name
         no_of_lines = 103456
         self._test_read_data_for_plain_nn(file_name, no_of_lines)
 
-    def test_read_batch_fast(self):
+    def test_read_batch_fast_for_FC_mode(self):
         repsly_data = self.repsly_data
         file_name = self.ten_users_file
 
@@ -119,7 +119,7 @@ class TestRepslyData(TestCase):
             i = i + 1
         self.assertEqual(i, 2)
 
-    def test_read_batch_slow(self):
+    def test_read_batch_slow_for_FC_mode(self):
         repsly_data = self.repsly_data
         file_name = self.file_name
 
