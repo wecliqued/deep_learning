@@ -42,13 +42,17 @@ class TestRepslyData(TestCase):
             (self.ten_users_file, 'CONV', 'test'): 0
         }
 
+        train_size = (0.8 * 103456 // (self.batch_size * 16))
+        val_test_size = (0.1 * 103456 // (self.batch_size * 16))
+        full_size = 103456//(self.batch_size*16)
+
         self.expected_epoch_size_slow = {
-            (self.file_name, 'FC', 'train'): (0.8 * 103456 // (self.batch_size * 16)),
-            (self.file_name, 'FC', 'validation'): (0.1 * 103456 // (self.batch_size * 16)),
-            (self.file_name, 'FC', 'test'): (0.1 * 103456 // (self.batch_size * 16)),
-            (self.file_name, 'CONV', 'train'): (0.8 * 103456 // (self.batch_size * 16)),
-            (self.file_name, 'CONV', 'validation'): (0.1 * 103456 // (self.batch_size * 16)),
-            (self.file_name, 'CONV', 'test'): (0.1 * 103456 // (self.batch_size * 16))
+            (self.file_name, 'FC', 'train'): train_size,
+            (self.file_name, 'FC', 'validation'): val_test_size,
+            (self.file_name, 'FC', 'test'): (val_test_size + (full_size-(train_size+(val_test_size*2)))),
+            (self.file_name, 'CONV', 'train'): train_size,
+            (self.file_name, 'CONV', 'validation'): val_test_size,
+            (self.file_name, 'CONV', 'test'): (val_test_size + (full_size-(train_size+(val_test_size*2))))
         }
 
         self.repsly_data = RepslyData()
