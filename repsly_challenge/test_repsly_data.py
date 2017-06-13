@@ -23,36 +23,60 @@ class TestRepslyData(TestCase):
             (self.file_name, 103456, 'FC'):  [1+15*16],
             (self.file_name, 103456, 'CONV'): [16, 16]
         }
-        self.batch_size = 4
+        self.batch_size_fast = 1
+        self.batch_size_slow = 64
         self.train_size = 0.8
 
-        self.expected_X_shape = {
-            'FC': [4, 1+15*16],
-            'CONV': [4, 16, 16]
+        self.expected_X_shape_fast = {
+            'FC': [self.batch_size_fast, 1+15*16],
+            'CONV': [self.batch_size_fast, 16, 16]
         }
 
-        self.expected_y_shape = [4]
+        self.expected_X_shape_slow = {
+            'FC': [self.batch_size_slow, 1+15*16],
+            'CONV': [self.batch_size_slow, 16, 16]
+        }
+
+        self.expected_y_shape_fast = [1]
+
+        self.expected_data_read_length_fast = {
+            (self.ten_users_file, 'FC'): {'train': 8, 'validation': 1, 'test': 1},
+            (self.ten_users_file, 'CONV'): {'train': 8, 'validation': 1, 'test': 1}
+        }
 
         self.expected_epoch_size_fast = {
-            (self.ten_users_file, 'FC', 'train'): 2,
-            (self.ten_users_file, 'FC', 'validation'): 0,
-            (self.ten_users_file, 'FC', 'test'): 0,
-            (self.ten_users_file, 'CONV', 'train'): 2,
-            (self.ten_users_file, 'CONV', 'validation'): 0,
-            (self.ten_users_file, 'CONV', 'test'): 0
+            (self.ten_users_file, 'FC', 'train'): 8,
+            (self.ten_users_file, 'FC', 'validation'): 1,
+            (self.ten_users_file, 'FC', 'test'): 1,
+            (self.ten_users_file, 'CONV', 'train'): 8,
+            (self.ten_users_file, 'CONV', 'validation'): 1,
+            (self.ten_users_file, 'CONV', 'test'): 1
         }
 
-        train_size = (0.8 * 103456 // (self.batch_size * 16))
-        val_test_size = (0.1 * 103456 // (self.batch_size * 16))
-        full_size = 103456//(self.batch_size*16)
+        train_size_slow = (0.8 * 103456 // (self.batch_size_slow * 16))
+        val_test_size_slow = (0.1 * 103456 // (self.batch_size_slow * 16))
+        full_size_slow = 103456//(self.batch_size_slow * 16)
+
+        self.expected_data_read_length_slow = {
+            (self.file_name, 'FC'):
+                {'train': train_size_slow,
+                 'validation': val_test_size_slow,
+                  'test': val_test_size_slow + (full_size_slow-(train_size_slow+(val_test_size_slow*2)))
+                 },
+            (self.file_name, 'CONV'):
+                {'train': train_size_slow,
+                'validation': val_test_size_slow,
+                'test': val_test_size_slow + (full_size_slow - (train_size_slow + (val_test_size_slow * 2)))
+                 }
+        }
 
         self.expected_epoch_size_slow = {
-            (self.file_name, 'FC', 'train'): train_size,
-            (self.file_name, 'FC', 'validation'): val_test_size,
-            (self.file_name, 'FC', 'test'): (val_test_size + (full_size-(train_size+(val_test_size*2)))),
-            (self.file_name, 'CONV', 'train'): train_size,
-            (self.file_name, 'CONV', 'validation'): val_test_size,
-            (self.file_name, 'CONV', 'test'): (val_test_size + (full_size-(train_size+(val_test_size*2))))
+            (self.file_name, 'FC', 'train'): train_size_slow,
+            (self.file_name, 'FC', 'validation'): val_test_size_slow,
+            (self.file_name, 'FC', 'test'): (val_test_size_slow + (full_size_slow-(train_size_slow+(val_test_size_slow*2)))),
+            (self.file_name, 'CONV', 'train'): train_size_slow,
+            (self.file_name, 'CONV', 'validation'): val_test_size_slow,
+            (self.file_name, 'CONV', 'test'): (val_test_size_slow + (full_size_slow-(train_size_slow+(val_test_size_slow*2))))
         }
 
         self.repsly_data = RepslyData()
@@ -147,27 +171,51 @@ class TestRepslyData(TestCase):
         for params in self.expected_data_shape_slow.keys():
             self._test_prepare_data(*params, expected_data_shape=self.expected_data_shape_slow[params])
 
-
-    def _test_read_batch(self, file_name, mode, data_set, expected_length):
+    def _test_read_data(self, file_name, mode, expected_data_read_length):
         repsly_data = self.repsly_data
 
         repsly_data._prepare_data(file_name, mode)
         repsly_data.read_data(file_name, mode)
 
-        self.i = 0
+        for data_set in expected_data_read_length.keys():
+            self.assertEqual(len(repsly_data.X[data_set]), expected_data_read_length[data_set])
 
-        for X, y in repsly_data.read_batch(batch_size=self.batch_size, data_set=data_set):
-            np.testing.assert_array_equal(X.shape, self.expected_X_shape[mode])
-            np.testing.assert_array_equal(y.shape, self.expected_y_shape)
-            self.i = self.i + 1
+    def test_read_data_fast(self):
+        for params in self.expected_data_read_length_fast.keys():
+            self._test_read_data(*params, expected_data_read_length=self.expected_data_read_length_fast[params])
 
-        print(file_name, mode, data_set, expected_length)
-        self.assertEqual(self.i, expected_length)
+    def test_read_data_slow(self):
+        for params in self.expected_data_read_length_slow.keys():
+            self._test_read_data(*params, expected_data_read_length=self.expected_data_read_length_slow[params])
+
+
+    def _test_read_batch(self, file_name, mode, data_set, expected_length, batch_size, expected_X_shape, expected_y_shape):
+        repsly_data = self.repsly_data
+
+        repsly_data._prepare_data(file_name, mode)
+        repsly_data.read_data(file_name, mode)
+
+        i = 0
+
+        for X, y in repsly_data.read_batch(batch_size=batch_size, data_set=data_set):
+            np.testing.assert_array_equal(X.shape, expected_X_shape[mode])
+            np.testing.assert_array_equal(y.shape, expected_y_shape)
+            i = i + 1
+
+        self.assertEqual(i, expected_length)
 
     def test_read_batch_fast(self):
         for params in self.expected_epoch_size_fast.keys():
-            self._test_read_batch(*params, expected_length=self.expected_epoch_size_fast[params])
+            self._test_read_batch(*params,
+                                  expected_length=self.expected_epoch_size_fast[params],
+                                  batch_size=self.batch_size_fast,
+                                  expected_X_shape=self.expected_X_shape_fast,
+                                  expected_y_shape=self.expected_y_shape_fast)
 
     def test_read_batch_slow(self):
         for params in self.expected_epoch_size_slow.keys():
-            self._test_read_batch(*params, expected_length=self.expected_epoch_size_slow[params])
+            self._test_read_batch(*params,
+                                  expected_length=self.expected_epoch_size_slow[params],
+                                  batch_size=self.batch_size_slow,
+                                  expected_X_shape=self.expected_X_shape_slow,
+                                  expected_y_shape=self.expected_y_shape_slow)

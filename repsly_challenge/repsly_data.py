@@ -76,8 +76,9 @@ class RepslyData:
     def read_data(self, file_name, mode, train_size=0.8):
         self._prepare_data(file_name, mode) # mode = 'FC' or 'CONV'
         no_of_data = self.X_all.shape[0]
-        no_of_train_data = int(no_of_data * train_size)
-        no_of_validation_data = int(no_of_data * ((1.0-train_size) / 2))
+        no_of_train_data = round(no_of_data * train_size)
+        no_of_validation_data = round(no_of_data * ((1.0-train_size) / 2))
+        no_of_test_data = no_of_data - (no_of_train_data-no_of_validation_data)
 
         np.random.seed(0)
         ix = np.random.permutation(no_of_data)

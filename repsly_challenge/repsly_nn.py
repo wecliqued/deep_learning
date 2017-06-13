@@ -95,7 +95,7 @@ class RepslyNN:
 
         # create network and do all the wiring
         # do not change the order because something might break (it will)
-        placeholders = self._create_placeholders()
+        self._create_placeholders()
         self._create_model(arch)
         self._create_loss()
         self._create_prediction()
@@ -104,9 +104,6 @@ class RepslyNN:
 
         # create summary writters for train and validation sets
         self._create_summary_writers()
-
-        # placeholders are needed for feeding the data into train()
-        return placeholders
 
     def train(self, data, batch_size, epochs):
         '''
@@ -124,9 +121,9 @@ class RepslyNN:
                 sess.run(tf.global_variables_initializer())
 
             start = time.time()
-            train_read_batch = data.read_batch(batch_size, 'train')
-            validation_read_batch = data.read_batch(batch_size, 'validation', endless=True)
             for i in range(epochs):
+                train_read_batch = data.read_batch(batch_size, 'train')
+                validation_read_batch = data.read_batch(batch_size, 'validation', endless=True)
                 for train_batch in train_read_batch:
                     train_feed_dict = self._create_feed_dictionary(train_batch)
                     # calculate current loss without updating variables
@@ -195,7 +192,9 @@ class RepslyNN:
         os.makedirs(self.checkpoint_path, exist_ok=True)
         print('Checkpoint directory is:', os.path.abspath(self.checkpoint_path))
 
+        print('Creating tf.train.Saver()...', end='')
         self.saver = tf.train.Saver()
+        print('done')
         return self.saver
 
     def _save_checkpoint(self, sess):
@@ -208,7 +207,10 @@ class RepslyNN:
         saver = self.saver
 
         ckpt = tf.train.get_checkpoint_state(self.checkpoint_path)
+        print('self.checkpoint_path:', self.checkpoint_path)
+        print('ckpt:', ckpt)
         if ckpt and ckpt.model_checkpoint_path:
+            print('ckpt.model_checkpoint_path:', ckpt.model_checkpoint_path)
             saver.restore(sess, ckpt.model_checkpoint_path)
             return True
         return False
@@ -235,7 +237,7 @@ class RepslyFC(RepslyNN):
             h = self.X
             for hidden_size in arch:
                 h = tf.contrib.layers.fully_connected(h, hidden_size)
-            h = tf.nn.dropout(h, keep_prob=self.keep_prob)
+                h = tf.nn.dropout(h, keep_prob=self.keep_prob)
 
             # linear classifier at the end
             self.logits = tf.contrib.layers.fully_connected(h, 2, activation_fn=None)
