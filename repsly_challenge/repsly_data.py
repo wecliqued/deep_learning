@@ -55,6 +55,7 @@ class RepslyData:
             yield X, y
 
     def _prepare_data(self, file_name, mode):
+        assert(mode in ['FC', 'CONV'])
         self.X_all, self.y_all = None, None
         with open(file_name) as f:
             mycsv = csv.reader(f)
@@ -64,21 +65,13 @@ class RepslyData:
                 if mode is 'FC':
                     trial_start_day = X[0, 0]
                     repeating_columns =  np.reshape(X[:, 1:], [-1])
-                    X_row = np.concatenate([[trial_start_day], repeating_columns])
-                    if self.X_all is None:
-                        self.X_all = np.zeros([0, X_row.shape[0]])
-                        self.y_all = np.array([], dtype=np.int)
-                    self.X_all = np.concatenate([self.X_all, [X_row]])
-                    self.y_all = np.concatenate([self.y_all, [y]])
-                elif mode is 'CONV':
-                    if self.X_all is None:
-                        X_all_shape = np.concatenate([[0], X.shape])
-                        self.X_all = np.zeros(X_all_shape)
-                        self.y_all = np.array([], dtype=np.int)
-                    self.X_all = np.concatenate([self.X_all, [X]])
-                    self.y_all = np.concatenate([self.y_all, [y]])
-                else:
-                    raise 'Unsupported mode {}, should be FC or CONV'.format(mode)
+                    X = np.concatenate([[trial_start_day], repeating_columns])
+                if self.X_all is None:
+                    X_all_shape = np.concatenate([[0], X.shape])
+                    self.X_all = np.zeros(X_all_shape)
+                    self.y_all = np.array([], dtype=np.int)
+                self.X_all = np.concatenate([self.X_all, [X]])
+                self.y_all = np.concatenate([self.y_all, [y]])
 
     def read_data(self, file_name, mode, train_size=0.8):
         self._prepare_data(file_name, mode) # mode = 'FC' or 'CONV'
@@ -97,8 +90,8 @@ class RepslyData:
         self.X['validation'] = self.X_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data], :]
         self.y['validation'] = self.y_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data]]
 
-        self.X['test'] = self.X_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data:], :]
-        self.y['test'] = self.y_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data:]]
+        self.X['test'] = self.X_all[ix[no_of_train_data+no_of_validation_data:], :]
+        self.y['test'] = self.y_all[ix[no_of_train_data+no_of_validation_data:]]
 
     def read_batch(self, batch_size, data_set='train'):
         no_of_data = self.X[data_set].shape[0]
