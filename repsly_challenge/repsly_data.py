@@ -100,11 +100,14 @@ class RepslyData:
         self.X['test'] = self.X_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data:], :]
         self.y['test'] = self.y_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data:]]
 
-    def read_batch(self, batch_size, data_set='train'):
+    def read_batch(self, batch_size, data_set='train', endless=False):
         no_of_data = self.X[data_set].shape[0]
         X, y = self.X[data_set], self.y[data_set]
 
-        for i in range(no_of_data // batch_size):
-            yield X[i * batch_size:(i + 1) * batch_size, :], \
-                  y[i * batch_size:(i + 1) * batch_size]
+        once = False
+        while (endless or not once):
+            for i in range(no_of_data // batch_size):
+                yield X[i * batch_size:(i + 1) * batch_size, :], \
+                      y[i * batch_size:(i + 1) * batch_size]
+            once = True
 
