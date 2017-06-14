@@ -31,12 +31,25 @@ class TestRepslyFC(TestCase):
         repsly_nn = self.repsly_fc
         arch = self.arch
 
-        X, y, keep_prob = repsly_nn._create_placeholders()
+        repsly_nn._create_placeholders()
 
         # one of the easiest sanity checks is the number of variables created
         self.assertEqual(repsly_nn.get_num_of_variables(), 0)
         repsly_nn._create_model(arch)
-        self.assertEqual(repsly_nn.get_num_of_variables(), (241+1)*100+(100+1)*200+(200+1)*2)
+        self.assertEqual(repsly_nn.get_num_of_variables(), (241+1)*arch[0]+(arch[0]+1)*arch[1]+(arch[1]+1)*2)
+
+    def _test__calculate_f1_score(self, repsly_nn):
+        tp, fp, tn, fn = 2, 3, 5, 7
+        feed_dict = {repsly_nn.prediction: [1]*(tp+fp)   + [0]*(tn+fn),
+                     repsly_nn.y:          [1]*tp+[0]*fp + [0]*tn+[1]*fn
+        }
+        precision = tp / (tp+fp)
+        recall = tp / (tp+fn)
+        expected_f1_score = 2 * precision * recall / (precision+recall)
+        with tf.Session() as sess:
+            f1_score = sess.run(repsly_nn.f1_score, feed_dict)
+            self.assertEqual(f1_score, expected_f1_score)
+
 
     def test_create_net(self):
         repsly_nn = self.repsly_fc
@@ -44,6 +57,8 @@ class TestRepslyFC(TestCase):
         arch_dict = self.arch_dict
 
         repsly_nn.create_net(arch, arch_dict)
+
+        self._test__calculate_f1_score(repsly_nn)
 
         print('_name_extension():', repsly_nn._name_extension())
 

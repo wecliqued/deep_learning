@@ -42,18 +42,18 @@ class RepslyNN:
             self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.labels, logits=self.logits))
 
     def _create_prediction(self):
-        self.prediction = tf.argmax(self.logits, axis=1)
+        self.prediction = tf.to_int32(tf.argmax(self.logits, axis=1))
 
     def _calculate_f1_score(self):
         '''
         F1 score is used instead of accuracy in case of strongly biased classes. Google it up :)
         :return: F1 score, what else?!?
         '''
-        logits = self.logits
-        labels = self.labels
-        tp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.equal(logits, labels), tf.equal(logits, 1))))
-        fp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(logits, labels), tf.equal(logits, 1))))
-        fn = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(logits, labels), tf.equal(logits, 0))))
+        prediction = self.prediction
+        y = self.y
+        tp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.equal(prediction, y), tf.equal(prediction, 1))))
+        fp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(prediction, y), tf.equal(prediction, 1))))
+        fn = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(prediction, y), tf.equal(prediction, 0))))
 
         precission = tp / (tp + fp)
         recall = tp / (tp + fn)
