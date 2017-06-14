@@ -52,13 +52,15 @@ class RepslyNN:
         prediction = self.prediction
         y = self.y
         tp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.equal(prediction, y), tf.equal(prediction, 1))))
+        tn = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.equal(prediction, y), tf.equal(prediction, 0))))
         fp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(prediction, y), tf.equal(prediction, 1))))
         fn = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(prediction, y), tf.equal(prediction, 0))))
 
-        precission = tp / (tp + fp)
-        recall = tp / (tp + fn)
+        self.precision = tp / (tp + fp)
+        self.recall = tp / (tp + fn)
+        self.accuracy = (tp+tn) / (tp+tn+fp+fn)
 
-        self.f1_score = 2 * precission * recall / (precission + recall)
+        self.f1_score = 2 * self.precision * self.recall / (self.precision + self.recall)
 
     def _create_optimizer(self):
         '''
@@ -171,6 +173,10 @@ class RepslyNN:
             tf.summary.scalar('lr', self.lr)
             tf.summary.scalar('loss', self.loss)
             tf.summary.scalar('f1_score', self.f1_score)
+            tf.summary.scalar('precision', self.precision)
+            tf.summary.scalar('recall', self.recall)
+            tf.summary.scalar('accuracy', self.accuracy)
+
             self.summary = tf.summary.merge_all()
 
     def _create_summary_writers(self):
