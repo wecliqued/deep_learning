@@ -74,7 +74,7 @@ class RepslyNN:
                                                  decay_rate=self.decay_rate,
                                                  name='learning_rate')
 
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss, global_step=self.global_step)
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.loss, global_step=self.global_step)
 
     def create_net(self, arch, arch_dict, learning_rate=0.001, decay_steps=20, decay_rate=0.999):
         '''
