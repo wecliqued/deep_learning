@@ -68,11 +68,11 @@ class RepslyNN:
         with tf.name_scope('optimizer'):
             self.global_step = tf.Variable(0, trainable=False, dtype=tf.int32, name='global_step')
 
-            lr = tf.train.exponential_decay(learning_rate=self.learning_rate,
-                                            global_step=self.global_step,
-                                            decay_steps=self.decay_steps,
-                                            decay_rate=self.decay_rate,
-                                            name='learning_rate')
+            self.lr = tf.train.exponential_decay(learning_rate=self.learning_rate,
+                                                 global_step=self.global_step,
+                                                 decay_steps=self.decay_steps,
+                                                 decay_rate=self.decay_rate,
+                                                 name='learning_rate')
 
             self.optimizer = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss, global_step=self.global_step)
 
@@ -167,6 +167,7 @@ class RepslyNN:
 
     def _create_summaries(self):
         with tf.name_scope('summaries'):
+            tf.summary.scalar('lr', self.lr)
             tf.summary.scalar('loss', self.loss)
             tf.summary.scalar('f1_score', self.f1_score)
             self.summary = tf.summary.merge_all()
