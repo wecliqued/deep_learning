@@ -1,9 +1,6 @@
 import csv
 from datetime import datetime
 import numpy as np
-import math
-
-# ideja: treba nam funkcija koja cita batch
 
 class RepslyData:
     def __init__(self):
