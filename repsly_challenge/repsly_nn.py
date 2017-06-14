@@ -27,7 +27,7 @@ class RepslyNN:
     def _create_model(self, arch):
         pass
 
-    def _create_feed_dictionary(self, batch):
+    def _create_feed_dictionary(self, batch, mode):
         pass
 
     ################################################################################################################
@@ -86,6 +86,9 @@ class RepslyNN:
         :param decay_rate:
         :return:
         '''
+        # clear everything (important for summaries)
+        tf.reset_default_graph()
+
         # save for latter
         self.arch = arch
         self.arch_dict = arch_dict
@@ -105,13 +108,14 @@ class RepslyNN:
         # create summary writters for train and validation sets
         self._create_summary_writers()
 
-    def train(self, data, batch_size, epochs):
+    def train(self, data, batch_size, epochs, skip_steps=20):
         '''
         Train network.
         :param data: data source
+        :param batch_size: batch size :)
         :param epochs: number of epochs to train :)
+        :param skip_steps: number of steps to make before writing summaries out
         '''
-        skip_steps = 20
 
         with tf.Session() as sess:
             # restore checkpoint if possible
@@ -125,7 +129,7 @@ class RepslyNN:
                 train_read_batch = data.read_batch(batch_size, 'train')
                 validation_read_batch = data.read_batch(batch_size, 'validation', endless=True)
                 for train_batch in train_read_batch:
-                    train_feed_dict = self._create_feed_dictionary(train_batch)
+                    train_feed_dict = self._create_feed_dictionary(train_batch, 'train')
                     # calculate current loss without updating variables
                     iteration, train_loss = sess.run([self.global_step, self.loss], feed_dict=train_feed_dict)
                     if iteration % skip_steps == 0:
@@ -133,7 +137,7 @@ class RepslyNN:
                         self._add_summary(sess, train_feed_dict, 'train')
 
                         # calculate validation loss and write summary
-                        validation_feed_dict = self._create_feed_dictionary(next(validation_read_batch))
+                        validation_feed_dict = self._create_feed_dictionary(next(validation_read_batch), 'validation')
                         validation_loss = self._add_summary(sess, validation_feed_dict, 'validation')
 
                         # save checkpoint
@@ -242,8 +246,11 @@ class RepslyFC(RepslyNN):
             # linear classifier at the end
             self.logits = tf.contrib.layers.fully_connected(h, 2, activation_fn=None)
 
-    def _create_feed_dictionary(self, batch):
+    def _create_feed_dictionary(self, batch, mode):
         X, y = batch
         keep_prob = self.arch_dict['keep_prob']
-        return {self.X: X, self.y: y, self.keep_prob: keep_prob}
+        if mode is 'train':
+            return {self.X: X, self.y: y, self.keep_prob: keep_prob}
+        else:
+            return {self.X: X, self.y: y, self.keep_prob: 1}
 
