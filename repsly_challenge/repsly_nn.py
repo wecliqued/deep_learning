@@ -27,7 +27,7 @@ class RepslyNN:
     def _create_model(self, arch):
         pass
 
-    def _create_feed_dictionary(self, batch, mode):
+    def _create_feed_dictionary(self, batch, regularization_on):
         pass
 
     ################################################################################################################
@@ -129,15 +129,16 @@ class RepslyNN:
                 train_read_batch = data.read_batch(batch_size, 'train')
                 validation_read_batch = data.read_batch(batch_size, 'validation', endless=True)
                 for train_batch in train_read_batch:
-                    train_feed_dict = self._create_feed_dictionary(train_batch, 'train')
+                    train_feed_dict = self._create_feed_dictionary(train_batch, regularization_on=True)
                     # calculate current loss without updating variables
                     iteration, train_loss = sess.run([self.global_step, self.loss], feed_dict=train_feed_dict)
                     if iteration % skip_steps == 0:
                         # write train summary
-                        self._add_summary(sess, train_feed_dict, 'train')
+                        train_feed_dict = self._create_feed_dictionary(train_batch, regularization_on=False)
+                        train_loss = self._add_summary(sess, train_feed_dict, 'train')
 
                         # calculate validation loss and write summary
-                        validation_feed_dict = self._create_feed_dictionary(next(validation_read_batch), 'validation')
+                        validation_feed_dict = self._create_feed_dictionary(next(validation_read_batch), regularization_on=False)
                         validation_loss = self._add_summary(sess, validation_feed_dict, 'validation')
 
                         # save checkpoint
@@ -247,10 +248,10 @@ class RepslyFC(RepslyNN):
             # linear classifier at the end
             self.logits = tf.contrib.layers.fully_connected(h, 2, activation_fn=None)
 
-    def _create_feed_dictionary(self, batch, mode):
+    def _create_feed_dictionary(self, batch, regularization_on):
         X, y = batch
         keep_prob = self.arch_dict['keep_prob']
-        if mode is 'train':
+        if regularization_on is 'train':
             return {self.X: X, self.y: y, self.keep_prob: keep_prob}
         else:
             return {self.X: X, self.y: y, self.keep_prob: 1}
