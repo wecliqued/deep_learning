@@ -105,8 +105,9 @@ ENV/
 
 # ignore data as well :)
 seq2seq/data/*
-repsly_challenge/data/*.csv
-repsly_challenge/data/*
+repsly_challenge/data/trial_users_analysis.csv
 seq2seq/graphs/*
 seq2seq/checkpoints/*
+repsly_challenge/graphs
+repsly_challenge/checkpoints
 .DS_Store
