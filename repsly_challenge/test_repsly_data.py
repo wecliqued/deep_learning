@@ -180,27 +180,28 @@ class TestRepslyData(TestCase):
                                   expected_y_shape=expected_y_shape)
 
     def test_read_batch_fast(self):
-        expected_length = {
-            (self.ten_users_file, 'FC'):
-                {'train': 8,
-                 'validation': 1,
-                 'test': 1},
-            (self.ten_users_file, 'CONV'):
-                {'train': 8,
-                 'validation': 1,
-                 'test': 1
-                 }
-        }
+        for batch_size in range(10):
+            expected_length = {
+                (self.ten_users_file, 'FC'):
+                    {'train': 8,
+                     'validation': 1,
+                     'test': 1},
+                (self.ten_users_file, 'CONV'):
+                    {'train': 8,
+                     'validation': 1,
+                     'test': 1
+                     }
+            }
 
-        expected_X_shape = {
-            'FC': [self.batch_size_fast, 1 + 15 * 16],
-            'CONV': [self.batch_size_fast, 16, 16]
-        }
+            expected_X_shape = {
+                'FC': [self.batch_size_fast, 1 + 15 * 16],
+                'CONV': [self.batch_size_fast, 16, 16]
+            }
 
-        expected_y_shape = self.batch_size_fast
-        batch_size = self.batch_size_fast
+            expected_y_shape = batch_size
+            batch_size = batch_size
 
-        self._test_read_batch_dispatch(expected_length, batch_size, expected_X_shape, expected_y_shape)
+            self._test_read_batch_dispatch(expected_length, batch_size, expected_X_shape, expected_y_shape)
 
     def test_read_batch_slow(self):
         expected_length = {
