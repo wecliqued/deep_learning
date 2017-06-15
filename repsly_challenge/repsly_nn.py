@@ -49,18 +49,26 @@ class RepslyNN:
         F1 score is used instead of accuracy in case of strongly biased classes. Google it up :)
         :return: F1 score, what else?!?
         '''
-        prediction = self.prediction
-        y = self.y
-        tp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.equal(prediction, y), tf.equal(prediction, 1))))
-        tn = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.equal(prediction, y), tf.equal(prediction, 0))))
-        fp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(prediction, y), tf.equal(prediction, 1))))
-        fn = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(prediction, y), tf.equal(prediction, 0))))
+        with tf.name_scope('stats'):
+            prediction = self.prediction
+            y = self.y
+            with tf.name_scope('true_positive'):
+                tp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.equal(prediction, y), tf.equal(prediction, 1))))
+            with tf.name_scope('true_negative'):
+                tn = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.equal(prediction, y), tf.equal(prediction, 0))))
+            with tf.name_scope('false_positive'):
+                fp = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(prediction, y), tf.equal(prediction, 1))))
+            with tf.name_scope('false_negative'):
+                fn = tf.reduce_sum(tf.to_int32(tf.logical_and(tf.not_equal(prediction, y), tf.equal(prediction, 0))))
 
-        self.precision = tp / (tp + fp)
-        self.recall = tp / (tp + fn)
-        self.accuracy = (tp+tn) / (tp+tn+fp+fn)
+            with tf.name_scope('precision'):
+                self.precision = tp / (tp + fp)
+            with tf.name_scope('recall'):
+                self.recall = tp / (tp + fn)
+            with tf.name_scope('accuracy'):
+                self.accuracy = (tp+tn) / (tp+tn+fp+fn)
 
-        self.f1_score = 2 * self.precision * self.recall / (self.precision + self.recall)
+            self.f1_score = 2 * self.precision * self.recall / (self.precision + self.recall)
 
     def _create_optimizer(self):
         '''
@@ -110,6 +118,21 @@ class RepslyNN:
         # create summary writters for train and validation sets
         self._create_summary_writers()
 
+    def _calculate_stats(self, data, batch_size, data_set, sess):
+        read_batch = data.read_batch(batch_size, data_set)
+
+        stats = np.zeros(5)
+        total = 0
+        for batch in read_batch:
+            size = len(batch)
+            feed_dict = self._create_feed_dictionary(batch, regularization_on=False)
+            stats += size * np.array(sess.run([self.loss, self.accuracy, self.precision, self.recall, self.f1_score],
+                                              feed_dict=feed_dict))
+            total += size
+        stats = stats / total
+        names = ['loss', 'accuracy', 'precision', 'recall', 'f1_score']
+        return {name: stats[i] for i, name in enumerate(names)}
+
     def train(self, data, batch_size, epochs, skip_steps=20):
         '''
         Train network.
@@ -152,6 +175,7 @@ class RepslyNN:
 
                     # finally, do the backpropagation and update the variables
                     sess.run(self.optimizer, feed_dict=train_feed_dict)
+            return self._calculate_stats(data, batch_size, 'validation', sess)
 
     ################################################################################################################
     #
