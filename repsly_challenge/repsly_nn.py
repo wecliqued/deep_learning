@@ -261,9 +261,11 @@ class RepslyFC(RepslyNN):
         :return:
         '''
         with tf.name_scope('input_data'):
-            self.X = tf.placeholder(tf.float32, shape=[None, 241], name='X')
-            self.y = tf.placeholder(tf.int32, shape=[None], name='y')
-        self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
+            with tf.name_scope('batch'):
+                self.X = tf.placeholder(tf.float32, shape=[None, 241], name='X')
+                self.y = tf.placeholder(tf.int32, shape=[None], name='y')
+            self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
+            self.input_keep_prob = tf.placeholder(tf.float32, name='input_keep_prob')
         return self.X, self.y, self.keep_prob
 
     def _create_model(self, arch):
@@ -272,7 +274,7 @@ class RepslyFC(RepslyNN):
         :param arch: list of hidden layer sizes
         '''
         with tf.name_scope('model'):
-            h = self.X
+            h = tf.nn.dropout(self.X, keep_prob=self.input_keep_prob)
             for hidden_size in arch:
                 h = tf.contrib.layers.fully_connected(h, hidden_size)
                 h = tf.nn.dropout(h, keep_prob=self.keep_prob)
@@ -283,8 +285,9 @@ class RepslyFC(RepslyNN):
     def _create_feed_dictionary(self, batch, regularization_on):
         X, y = batch
         keep_prob = self.arch_dict['keep_prob']
+        input_keep_prob = self.arch_dict['input_keep_prob']
         if regularization_on is 'train':
-            return {self.X: X, self.y: y, self.keep_prob: keep_prob}
+            return {self.X: X, self.y: y, self.keep_prob: keep_prob, self.input_keep_prob: input_keep_prob}
         else:
-            return {self.X: X, self.y: y, self.keep_prob: 1}
+            return {self.X: X, self.y: y, self.keep_prob: 1, input_keep_prob: 1}
 
