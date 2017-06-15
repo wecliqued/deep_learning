@@ -42,7 +42,8 @@ class RepslyNN:
             self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.labels, logits=self.logits))
 
     def _create_prediction(self):
-        self.prediction = tf.to_int32(tf.argmax(self.logits, axis=1))
+        with tf.name_scope('prediction'):
+            self.prediction = tf.to_int32(tf.argmax(self.logits, axis=1))
 
     def _calculate_f1_score(self):
         '''
@@ -68,7 +69,8 @@ class RepslyNN:
             with tf.name_scope('accuracy'):
                 self.accuracy = (tp+tn) / (tp+tn+fp+fn)
 
-            self.f1_score = 2 * self.precision * self.recall / (self.precision + self.recall)
+            with tf.name_scope('f1_score'):
+                self.f1_score = 2 * self.precision * self.recall / (self.precision + self.recall)
 
     def _create_optimizer(self):
         '''
