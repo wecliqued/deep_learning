@@ -10,6 +10,10 @@ class TestRepslyFC(TestCase):
     def setUp(self):
         self.repsly_fc = RepslyFC()
         self.arch = [100, 200]
+        # hidden layers and linear classifier
+        self.expected_num_variables  = (241 + 1) * self.arch[0] + (self.arch[0] + 1) * self.arch[1] + (self.arch[1] + 1) * 2
+        # batch normalization
+        self.expected_num_variables += 2 * np.sum(self.arch)
         self.arch_dict = {'keep_prob': 0.8, 'input_keep_prob': 0.9}
 
         np.random.seed(0)
@@ -36,7 +40,7 @@ class TestRepslyFC(TestCase):
         # one of the easiest sanity checks is the number of variables created
         self.assertEqual(repsly_nn.get_num_of_variables(), 0)
         repsly_nn._create_model(arch)
-        self.assertEqual(repsly_nn.get_num_of_variables(), (241+1)*arch[0]+(arch[0]+1)*arch[1]+(arch[1]+1)*2)
+        self.assertEqual(repsly_nn.get_num_of_variables(), self.expected_num_variables)
 
     def _test__calculate_f1_score(self, repsly_nn):
         tp, fp, tn, fn = 2, 3, 5, 7
@@ -90,11 +94,11 @@ class TestRepslyFC(TestCase):
         repsly_nn.create_net(arch, arch_dict)
 
         # check that all variables are created
-        self.assertEqual(repsly_nn.get_num_of_variables(), (241+1)*arch[0]+(arch[0]+1)*arch[1]+(arch[1]+1)*2)
+        self.assertEqual(repsly_nn.get_num_of_variables(), self.expected_num_variables)
 
         # create feed dictionary for loss calculation
         batch = next(read_batch)
-        feed_dict = repsly_nn._create_feed_dictionary(batch, regularization_on=False)
+        feed_dict = repsly_nn._create_feed_dictionary(batch, training=False)
 
         # Saver must be created *after* variables are created, otherwise it will fail
         repsly_nn._create_checkpoint_saver()

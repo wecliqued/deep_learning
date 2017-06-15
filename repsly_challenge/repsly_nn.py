@@ -27,7 +27,7 @@ class RepslyNN:
     def _create_model(self, arch):
         pass
 
-    def _create_feed_dictionary(self, batch, regularization_on):
+    def _create_feed_dictionary(self, batch, training):
         pass
 
     ################################################################################################################
@@ -127,7 +127,7 @@ class RepslyNN:
         total = 0
         for batch in read_batch:
             size = len(batch)
-            feed_dict = self._create_feed_dictionary(batch, regularization_on=False)
+            feed_dict = self._create_feed_dictionary(batch, training=False)
             stats += size * np.array(sess.run([self.loss, self.accuracy, self.precision, self.recall, self.f1_score],
                                               feed_dict=feed_dict))
             total += size
@@ -156,16 +156,16 @@ class RepslyNN:
                 train_read_batch = data.read_batch(batch_size, 'train')
                 validation_read_batch = data.read_batch(batch_size, 'validation', endless=True)
                 for train_batch in train_read_batch:
-                    train_feed_dict = self._create_feed_dictionary(train_batch, regularization_on=True)
+                    train_feed_dict = self._create_feed_dictionary(train_batch, training=True)
                     # calculate current loss without updating variables
                     iteration, train_loss = sess.run([self.global_step, self.loss], feed_dict=train_feed_dict)
                     if iteration % skip_steps == 0:
                         # write train summary
-                        train_feed_dict = self._create_feed_dictionary(train_batch, regularization_on=False)
+                        train_feed_dict = self._create_feed_dictionary(train_batch, training=False)
                         train_loss = self._add_summary(sess, train_feed_dict, 'train')
 
                         # calculate validation loss and write summary
-                        validation_feed_dict = self._create_feed_dictionary(next(validation_read_batch), regularization_on=False)
+                        validation_feed_dict = self._create_feed_dictionary(next(validation_read_batch), training=False)
                         validation_loss = self._add_summary(sess, validation_feed_dict, 'validation')
 
                         # save checkpoint
@@ -266,7 +266,13 @@ class RepslyFC(RepslyNN):
                 self.y = tf.placeholder(tf.int32, shape=[None], name='y')
             self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
             self.input_keep_prob = tf.placeholder(tf.float32, name='input_keep_prob')
+            self.training = tf.placeholder(tf.bool, name='training')
         return self.X, self.y, self.keep_prob
+
+    def _fully_connected_layer_with_dropout_and_batch_norm(self, input, num_outputs):
+        h1 = tf.contrib.layers.fully_connected(input, num_outputs, activation_fn=None)
+        h2 = tf.layers.batch_normalization(h1, training=self.training)
+        return tf.nn.relu(h2)
 
     def _create_model(self, arch):
         '''
@@ -276,18 +282,17 @@ class RepslyFC(RepslyNN):
         with tf.name_scope('model'):
             h = tf.nn.dropout(self.X, keep_prob=self.input_keep_prob)
             for hidden_size in arch:
-                h = tf.contrib.layers.fully_connected(h, hidden_size)
-                h = tf.nn.dropout(h, keep_prob=self.keep_prob)
+                h = self._fully_connected_layer_with_dropout_and_batch_norm(h, hidden_size)
 
             # linear classifier at the end
             self.logits = tf.contrib.layers.fully_connected(h, 2, activation_fn=None)
 
-    def _create_feed_dictionary(self, batch, regularization_on):
+    def _create_feed_dictionary(self, batch, training):
         X, y = batch
         keep_prob = self.arch_dict['keep_prob']
         input_keep_prob = self.arch_dict['input_keep_prob']
-        if regularization_on is 'train':
-            return {self.X: X, self.y: y, self.keep_prob: keep_prob, self.input_keep_prob: input_keep_prob}
+        if training:
+            return {self.X: X, self.y: y, self.keep_prob: keep_prob, self.input_keep_prob: input_keep_prob, self.training: True}
         else:
-            return {self.X: X, self.y: y, self.keep_prob: 1, self.input_keep_prob: 1}
+            return {self.X: X, self.y: y, self.keep_prob: 1, self.input_keep_prob: 1, self.training: False}
 
