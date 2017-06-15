@@ -27,7 +27,7 @@ class RepslyNN:
     def _create_model(self, arch):
         pass
 
-    def _create_feed_dictionary(self, batch, training):
+    def _create_feed_dictionary(self, batch, is_training):
         pass
 
     ################################################################################################################
@@ -127,7 +127,7 @@ class RepslyNN:
         total = 0
         for batch in read_batch:
             size = len(batch)
-            feed_dict = self._create_feed_dictionary(batch, training=False)
+            feed_dict = self._create_feed_dictionary(batch, is_training=False)
             stats += size * np.array(sess.run([self.loss, self.accuracy, self.precision, self.recall, self.f1_score],
                                               feed_dict=feed_dict))
             total += size
@@ -156,16 +156,16 @@ class RepslyNN:
                 train_read_batch = data.read_batch(batch_size, 'train')
                 validation_read_batch = data.read_batch(batch_size, 'validation', endless=True)
                 for train_batch in train_read_batch:
-                    train_feed_dict = self._create_feed_dictionary(train_batch, training=True)
+                    train_feed_dict = self._create_feed_dictionary(train_batch, is_training=True)
                     # calculate current loss without updating variables
                     iteration, train_loss = sess.run([self.global_step, self.loss], feed_dict=train_feed_dict)
                     if iteration % skip_steps == 0:
                         # write train summary
-                        train_feed_dict = self._create_feed_dictionary(train_batch, training=False)
+                        train_feed_dict = self._create_feed_dictionary(train_batch, is_training=False)
                         train_loss = self._add_summary(sess, train_feed_dict, 'train')
 
                         # calculate validation loss and write summary
-                        validation_feed_dict = self._create_feed_dictionary(next(validation_read_batch), training=False)
+                        validation_feed_dict = self._create_feed_dictionary(next(validation_read_batch), is_training=False)
                         validation_loss = self._add_summary(sess, validation_feed_dict, 'validation')
 
                         # save checkpoint
@@ -267,14 +267,16 @@ class RepslyFC(RepslyNN):
             self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
             self.input_keep_prob = tf.placeholder(tf.float32, name='input_keep_prob')
             self.batch_norm_decay = tf.placeholder(tf.float32, name='batch_norm_decay')
-            self.training = tf.placeholder(tf.bool, name='training')
+            self.is_training = tf.placeholder(tf.bool, name='is_training')
         return self.X, self.y, self.keep_prob
 
     def _fully_connected_layer_with_dropout_and_batch_norm(self, input, num_outputs, use_batch_normalization):
         # skip bias if we are using batch normalization
         if use_batch_normalization:
+            # matmul -> batch_norm without scale -> ReLU -> dropout
             h = tf.contrib.layers.fully_connected(input, num_outputs, activation_fn=None, biases_initializer=None)
-            h = tf.contrib.layers.batch_norm(h, decay=self.batch_norm_decay, training=self.training, activation_fn=tf.nn.relu)
+            h = tf.contrib.layers.batch_norm(h, decay=self.batch_norm_decay, is_training=self.is_training, activation_fn=tf.nn.relu)
+            h = tf.nn.dropout(h, keep_prob=self.keep_prob)
             return h
             # old stuff - todo: remove
             # h = tf.layers.batch_normalization(h, training=self.training)
@@ -297,13 +299,20 @@ class RepslyFC(RepslyNN):
             with tf.name_scope('lin_layer'):
                 self.logits = tf.contrib.layers.fully_connected(h, 2, activation_fn=None)
 
-    def _create_feed_dictionary(self, batch, training):
+    def _create_feed_dictionary(self, batch, is_training):
         X, y = batch
-        keep_prob = self.arch_dict['keep_prob']
-        input_keep_prob = self.arch_dict['input_keep_prob']
-        batch_norm_decay = self.arch_dict['batch_norm_decay']
-        if training:
-            return {self.X: X, self.y: y, self.keep_prob: keep_prob, self.input_keep_prob: input_keep_prob, self.batch_norm_decay: batch_norm_decay, self.training: True}
+        if is_training:
+            keep_prob = self.arch_dict['keep_prob']
+            input_keep_prob = self.arch_dict['input_keep_prob']
         else:
-            return {self.X: X, self.y: y, self.keep_prob: 1, self.input_keep_prob: 1, self.batch_norm_decay: batch_norm_decay, self.training: False}
+            keep_prob = 1.0
+            input_keep_prob = 1.0
+        batch_norm_decay = self.arch_dict['batch_norm_decay']
+
+        return {self.X: X,
+                self.y: y,
+                self.keep_prob: keep_prob,
+                self.input_keep_prob: input_keep_prob,
+                self.batch_norm_decay: batch_norm_decay,
+                self.is_training: is_training}
 

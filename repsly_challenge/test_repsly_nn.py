@@ -107,7 +107,7 @@ class TestRepslyFC(TestCase):
 
         # create feed dictionary for loss calculation
         batch = next(read_batch)
-        feed_dict = repsly_nn._create_feed_dictionary(batch, training=False)
+        feed_dict = repsly_nn._create_feed_dictionary(batch, is_training=False)
 
         # Saver must be created *after* variables are created, otherwise it will fail
         repsly_nn._create_checkpoint_saver()
