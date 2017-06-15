@@ -192,7 +192,7 @@ class RepslyNN:
             'lr': str(self.learning_rate),
             'dr': str(self.decay_rate),
             'ds': str(self.decay_steps)})
-        return os.path.join(*['{}-{}'.format(k, desc[k]).replace(" ", "") for k in desc.keys()])
+        return os.path.join(*['{}-{}'.format(k, desc[k]).replace(" ", "").replace('[', '(').replace(']', ')') for k in desc.keys()])
 
     def _create_summaries(self):
         with tf.name_scope('summaries'):

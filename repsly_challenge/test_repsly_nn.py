@@ -10,7 +10,7 @@ class TestRepslyFC(TestCase):
     def setUp(self):
         self.repsly_fc = RepslyFC()
         self.arch = [100, 200]
-        self.arch_dict = {'keep_prob': 0.8}
+        self.arch_dict = {'keep_prob': 0.8, 'input_keep_prob': 0.9}
 
         np.random.seed(0)
         self.X = np.random.randint(0-4, 4, [3, 241])
@@ -77,3 +77,46 @@ class TestRepslyFC(TestCase):
 
         # todo: finish test :)
 #        self.fail()
+
+    def test_checkpoint_save_and_restore(self):
+        repsly_nn = self.repsly_fc
+        arch = self.arch
+        arch_dict = self.arch_dict
+        data = self.data
+        batch_size = self.batch_size
+        read_batch = data.read_batch(batch_size)
+
+        # create network
+        repsly_nn.create_net(arch, arch_dict)
+
+        # check that all variables are created
+        self.assertEqual(repsly_nn.get_num_of_variables(), (241+1)*arch[0]+(arch[0]+1)*arch[1]+(arch[1]+1)*2)
+
+        # create feed dictionary for loss calculation
+        batch = next(read_batch)
+        feed_dict = repsly_nn._create_feed_dictionary(batch, regularization_on=False)
+
+        # Saver must be created *after* variables are created, otherwise it will fail
+        repsly_nn._create_checkpoint_saver()
+
+        # first, we will create session and initialize variables
+        # and then we will run one batch and calculate loss
+        # that loss will be used to check if restore is working
+        with tf.Session() as sess1:
+            # initialize global variables
+            sess1.run(tf.global_variables_initializer())
+
+            loss1 = sess1.run(repsly_nn.loss, feed_dict=feed_dict)
+            print('loss1:', loss1)
+
+            saved_path = repsly_nn._save_checkpoint(sess1)
+            self.assertIsNotNone(saved_path)
+
+        with tf.Session() as sess2:
+            restored = repsly_nn._restore_checkpoint(sess2)
+            self.assertTrue(restored)
+
+            loss2 = sess2.run(repsly_nn.loss, feed_dict=feed_dict)
+            print('loss2:', loss2)
+
+            self.assertEqual(loss1, loss2)
