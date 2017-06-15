@@ -9,11 +9,8 @@ from repsly_data import RepslyData
 class TestRepslyFC(TestCase):
     def setUp(self):
         self.repsly_fc = RepslyFC()
-        self.arch = [100, 200]
-        # hidden layers and linear classifier
-        self.expected_num_variables  = (241 + 1) * self.arch[0] + (self.arch[0] + 1) * self.arch[1] + (self.arch[1] + 1) * 2
-        # batch normalization
-        self.expected_num_variables += 2 * np.sum(self.arch)
+        self.arch = [(100, False), (200, False)]
+
         self.arch_dict = {'keep_prob': 0.8, 'input_keep_prob': 0.9}
 
         np.random.seed(0)
@@ -25,6 +22,18 @@ class TestRepslyFC(TestCase):
         self.data = RepslyData()
         self.data.read_data(ten_users_file, 'FC')
         self.batch_size = 1
+
+    def expected_num_variables(self):
+        input_size = 241
+        num_variables = 0
+        for hidden_size, use_batch_normalization in self.arch:
+            num_variables += (input_size+1) * hidden_size
+            input_size = hidden_size
+            if use_batch_normalization:
+                num_variables += 2*hidden_size
+        num_variables += (input_size+1) * 2
+
+        return num_variables
 
     def test__create_placeholders(self):
         repsly_nn = self.repsly_fc
@@ -40,7 +49,7 @@ class TestRepslyFC(TestCase):
         # one of the easiest sanity checks is the number of variables created
         self.assertEqual(repsly_nn.get_num_of_variables(), 0)
         repsly_nn._create_model(arch)
-        self.assertEqual(repsly_nn.get_num_of_variables(), self.expected_num_variables)
+        self.assertEqual(repsly_nn.get_num_of_variables(), self.expected_num_variables())
 
     def _test__calculate_f1_score(self, repsly_nn):
         tp, fp, tn, fn = 2, 3, 5, 7
@@ -94,7 +103,7 @@ class TestRepslyFC(TestCase):
         repsly_nn.create_net(arch, arch_dict)
 
         # check that all variables are created
-        self.assertEqual(repsly_nn.get_num_of_variables(), self.expected_num_variables)
+        self.assertEqual(repsly_nn.get_num_of_variables(), self.expected_num_variables())
 
         # create feed dictionary for loss calculation
         batch = next(read_batch)

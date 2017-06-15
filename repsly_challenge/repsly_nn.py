@@ -269,10 +269,14 @@ class RepslyFC(RepslyNN):
             self.training = tf.placeholder(tf.bool, name='training')
         return self.X, self.y, self.keep_prob
 
-    def _fully_connected_layer_with_dropout_and_batch_norm(self, input, num_outputs):
-        h1 = tf.contrib.layers.fully_connected(input, num_outputs, activation_fn=None)
-        h2 = tf.layers.batch_normalization(h1, training=self.training)
-        return tf.nn.relu(h2)
+    def _fully_connected_layer_with_dropout_and_batch_norm(self, input, num_outputs, use_batch_normalization):
+        # skip bias if we are using batch normalization
+        if use_batch_normalization:
+            h = tf.contrib.layers.fully_connected(input, num_outputs, activation_fn=None, biases_initializer=None)
+            h = tf.layers.batch_normalization(h, training=self.training)
+            return tf.nn.relu(h)
+        else:
+            return tf.contrib.layers.fully_connected(input, num_outputs)
 
     def _create_model(self, arch):
         '''
@@ -281,11 +285,13 @@ class RepslyFC(RepslyNN):
         '''
         with tf.name_scope('model'):
             h = tf.nn.dropout(self.X, keep_prob=self.input_keep_prob)
-            for hidden_size in arch:
-                h = self._fully_connected_layer_with_dropout_and_batch_norm(h, hidden_size)
+            for i, (hidden_size, use_batch_normalization) in enumerate(arch):
+                with tf.name_scope('fc_layer_{}'.format(i)):
+                    h = self._fully_connected_layer_with_dropout_and_batch_norm(h, hidden_size, use_batch_normalization)
 
             # linear classifier at the end
-            self.logits = tf.contrib.layers.fully_connected(h, 2, activation_fn=None)
+            with tf.name_scope('lin_layer'):
+                self.logits = tf.contrib.layers.fully_connected(h, 2, activation_fn=None)
 
     def _create_feed_dictionary(self, batch, training):
         X, y = batch
