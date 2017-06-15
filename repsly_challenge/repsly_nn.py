@@ -266,6 +266,7 @@ class RepslyFC(RepslyNN):
                 self.y = tf.placeholder(tf.int32, shape=[None], name='y')
             self.keep_prob = tf.placeholder(tf.float32, name='keep_prob')
             self.input_keep_prob = tf.placeholder(tf.float32, name='input_keep_prob')
+            self.batch_norm_decay = tf.placeholder(tf.float32, name='batch_norm_decay')
             self.training = tf.placeholder(tf.bool, name='training')
         return self.X, self.y, self.keep_prob
 
@@ -273,8 +274,11 @@ class RepslyFC(RepslyNN):
         # skip bias if we are using batch normalization
         if use_batch_normalization:
             h = tf.contrib.layers.fully_connected(input, num_outputs, activation_fn=None, biases_initializer=None)
-            h = tf.layers.batch_normalization(h, training=self.training)
-            return tf.nn.relu(h)
+            h = tf.contrib.layers.batch_norm(h, decay=self.batch_norm_decay, training=self.training, activation_fn=tf.nn.relu)
+            return h
+            # old stuff - todo: remove
+            # h = tf.layers.batch_normalization(h, training=self.training)
+            #  return tf.nn.relu(h)
         else:
             return tf.contrib.layers.fully_connected(input, num_outputs)
 
@@ -297,8 +301,9 @@ class RepslyFC(RepslyNN):
         X, y = batch
         keep_prob = self.arch_dict['keep_prob']
         input_keep_prob = self.arch_dict['input_keep_prob']
+        batch_norm_decay = self.arch_dict['batch_norm_decay']
         if training:
-            return {self.X: X, self.y: y, self.keep_prob: keep_prob, self.input_keep_prob: input_keep_prob, self.training: True}
+            return {self.X: X, self.y: y, self.keep_prob: keep_prob, self.input_keep_prob: input_keep_prob, self.batch_norm_decay: batch_norm_decay, self.training: True}
         else:
-            return {self.X: X, self.y: y, self.keep_prob: 1, self.input_keep_prob: 1, self.training: False}
+            return {self.X: X, self.y: y, self.keep_prob: 1, self.input_keep_prob: 1, self.batch_norm_decay: batch_norm_decay, self.training: False}
 

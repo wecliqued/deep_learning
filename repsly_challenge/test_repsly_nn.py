@@ -11,7 +11,7 @@ class TestRepslyFC(TestCase):
         self.repsly_fc = RepslyFC()
         self.arch = [(100, False), (200, False)]
 
-        self.arch_dict = {'keep_prob': 0.8, 'input_keep_prob': 0.9}
+        self.arch_dict = {'keep_prob': 0.8, 'input_keep_prob': 0.9, 'batch_norm_decay': 0.9}
 
         np.random.seed(0)
         self.X = np.random.randint(0-4, 4, [3, 241])
