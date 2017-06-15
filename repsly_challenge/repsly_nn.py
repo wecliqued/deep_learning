@@ -289,5 +289,5 @@ class RepslyFC(RepslyNN):
         if regularization_on is 'train':
             return {self.X: X, self.y: y, self.keep_prob: keep_prob, self.input_keep_prob: input_keep_prob}
         else:
-            return {self.X: X, self.y: y, self.keep_prob: 1, input_keep_prob: 1}
+            return {self.X: X, self.y: y, self.keep_prob: 1, self.input_keep_prob: 1}
 
