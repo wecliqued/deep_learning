@@ -115,17 +115,13 @@ class RepslyData:
                                  range(len(list(data.columns.values)))}
         data_columns = [c for c in collection_of_columns if c not in ignore_columns]
         X, y = None, None
-        assert (data_columns[0] == date_started)
-        counter = 0
         for i in range(len(data)):
             day = ignore_columns[2]
             data.loc[i, data_columns[0]] = self._string_to_days(data.loc[i, data_columns[0]], first_date)
             if (data.loc[i, day] == 0):
                 if X is not None:
-                    counter = 0
                     yield X, y
                 X = pd.DataFrame(np.zeros([num_of_rows, len(data_columns)]), data_columns)
                 y = int(data.loc[i, ignore_columns[3]])
-            X[counter] = (data.loc[i, data_columns])
-            counter += 1
+            X[data.loc[i,day]] = (data.loc[i, data_columns])
         yield X, y
