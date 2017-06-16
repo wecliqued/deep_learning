@@ -92,11 +92,10 @@ class RepslyNN:
             with tf.control_dependencies(update_ops):
                 self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.loss, global_step=self.global_step)
 
-    def create_net(self, arch, arch_dict, learning_rate=0.001, decay_steps=20, decay_rate=0.999):
+    def create_net(self, arch, learning_rate=0.001, decay_steps=20, decay_rate=0.999):
         '''
         Creates neural network by calling all the functions in the right order.
-        :param arch: data structure used by the _create_model(), typically the number and size of hidden layers
-        :param arch_params: optional parameters used by _create_feed_dictionary(). E.g. arch_dict = {keep_prob: 0.9}.
+        :param arch: data structure used by the _create_model(), typically the number and size of hidden layers or keep_prob for dropout
         :param learning_rate:
         :param decay_steps:
         :param decay_rate:
@@ -107,7 +106,6 @@ class RepslyNN:
 
         # save for latter
         self.arch = arch
-        self.arch_dict = arch_dict
         self.learning_rate = learning_rate
         self.decay_steps = decay_steps
         self.decay_rate = decay_rate
@@ -190,8 +188,8 @@ class RepslyNN:
     ################################################################################################################
 
     def _name_extension(self):
-        desc = {type(self).__name__: str(self.arch)}
-        desc.update(self.arch_dict)
+        desc = {type(self).__name__: ''}
+        desc.update(self.arch)
         desc.update({
             'lr': str(self.learning_rate),
             'dr': str(self.decay_rate),
@@ -282,9 +280,6 @@ class RepslyFC(RepslyNN):
             h = tf.contrib.layers.batch_norm(h, decay=self.batch_norm_decay, scale=False, is_training=self.is_training, activation_fn=tf.nn.relu)
             h = tf.nn.dropout(h, keep_prob=self.keep_prob)
             return h
-            # old stuff - todo: remove
-            # h = tf.layers.batch_normalization(h, training=self.training)
-            #  return tf.nn.relu(h)
         else:
             return tf.contrib.layers.fully_connected(input, num_outputs)
 
@@ -293,9 +288,14 @@ class RepslyFC(RepslyNN):
         Creates fully connected network.
         :param arch: list of hidden layer sizes
         '''
+        use_batch_normalization = arch['use_batch_norm']
+        no_of_layers = arch['no_of_layers']
+        hidden_size = arch['hidden_size']
+
         with tf.name_scope('model'):
-            h = tf.nn.dropout(self.X, keep_prob=self.input_keep_prob)
-            for i, (hidden_size, use_batch_normalization) in enumerate(arch):
+            with tf.name_scope('input_dropout'):
+                h = tf.nn.dropout(self.X, keep_prob=self.input_keep_prob)
+            for i in range(no_of_layers):
                 with tf.name_scope('fc_layer_{}'.format(i)):
                     h = self._fully_connected_layer_with_dropout_and_batch_norm(h, hidden_size, use_batch_normalization)
 
@@ -306,12 +306,12 @@ class RepslyFC(RepslyNN):
     def _create_feed_dictionary(self, batch, is_training):
         X, y = batch
         if is_training:
-            keep_prob = self.arch_dict['keep_prob']
-            input_keep_prob = self.arch_dict['input_keep_prob']
+            keep_prob = self.arch['keep_prob']
+            input_keep_prob = self.arch['input_keep_prob']
         else:
             keep_prob = 1.0
             input_keep_prob = 1.0
-        batch_norm_decay = self.arch_dict['batch_norm_decay']
+        batch_norm_decay = self.arch['batch_norm_decay']
 
         return {self.X: X,
                 self.y: y,

@@ -10,11 +10,21 @@ class TestRepslyFC(TestCase):
     def setUp(self):
         self.repsly_fc = RepslyFC()
 
-        self.archs = {'without_batch_norm': ((111, False), (237, False)),
-                      'mixed_batch_norm': ((33, True), (37, False)),
-                      'with_batch_norm': ((193, True), (117, True))}
-
-        self.arch_dict = {'keep_prob': 0.8, 'input_keep_prob': 0.9, 'batch_norm_decay': 0.9}
+        self.archs = {
+            'without_batch_norm': {
+                'no_of_layers': 3,
+                'hidden_size': 257,
+                'use_batch_norm': False,
+                'keep_prob': 0.8,
+                'input_keep_prob': 0.9},
+            'with_batch_norm': {
+                'no_of_layers': 4,
+                'hidden_size': 137,
+                'use_batch_norm': True,
+                'keep_prob': 0.5,
+                'input_keep_prob': 0.8,
+                'batch_norm_decay': 0.95},
+        }
 
         np.random.seed(0)
         self.X = np.random.randint(0-4, 4, [3, 241])
@@ -37,7 +47,10 @@ class TestRepslyFC(TestCase):
     def expected_num_trainable_variables(self, arch):
         input_size = 241
         num_variables = 0
-        for hidden_size, use_batch_normalization in arch:
+        no_of_layers = arch['no_of_layers']
+        use_batch_normalization = arch['use_batch_norm']
+        hidden_size = arch['hidden_size']
+        for _ in range(no_of_layers):
             if use_batch_normalization:
                 # each neuron has input_size weights,
                 # but no bias because it is disabled by biases_initializer=None
@@ -90,10 +103,9 @@ class TestRepslyFC(TestCase):
 
     def test_create_net(self):
         repsly_nn = self.repsly_fc
-        arch = self.archs['mixed_batch_norm']
-        arch_dict = self.arch_dict
+        arch = self.archs['with_batch_norm']
 
-        repsly_nn.create_net(arch, arch_dict)
+        repsly_nn.create_net(arch)
 
         self._test__calculate_f1_score(repsly_nn)
 
@@ -104,12 +116,11 @@ class TestRepslyFC(TestCase):
 
     def test_train(self):
         repsly_nn = self.repsly_fc
-        arch = self.archs['mixed_batch_norm']
-        arch_dict = self.arch_dict
+        arch = self.archs['with_batch_norm']
         data = self.data
         batch_size = self.batch_size
 
-        repsly_nn.create_net(arch, arch_dict)
+        repsly_nn.create_net(arch)
         repsly_nn.train(data, batch_size, epochs=2)
 
         # todo: finish test :)
@@ -117,14 +128,13 @@ class TestRepslyFC(TestCase):
 
     def test_checkpoint_save_and_restore(self):
         repsly_nn = self.repsly_fc
-        arch = self.archs['mixed_batch_norm']
-        arch_dict = self.arch_dict
+        arch = self.archs['with_batch_norm']
         data = self.data
         batch_size = self.batch_size
         read_batch = data.read_batch(batch_size)
 
         # create network
-        repsly_nn.create_net(arch, arch_dict)
+        repsly_nn.create_net(arch)
 
         # check that all variables are created
         self.assertEqual(repsly_nn.get_num_of_trainable_variables(), self.expected_num_trainable_variables(arch))
