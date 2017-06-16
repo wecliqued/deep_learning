@@ -123,7 +123,7 @@ class TestRepslyData(TestCase):
     def _test_read_data(self, file_name, mode, expected_lengths):
         repsly_data = self.repsly_data
 
-        repsly_data._prepare_data(file_name, mode)
+#        repsly_data._prepare_data(file_name, mode)
         repsly_data.read_data(file_name, mode)
 
         for data_set in expected_lengths.keys():
@@ -157,16 +157,20 @@ class TestRepslyData(TestCase):
     def _test_read_batch(self, file_name, mode, expected_length, batch_size, expected_X_shape, expected_y_shape):
         repsly_data = self.repsly_data
 
-        repsly_data._prepare_data(file_name, mode)
         repsly_data.read_data(file_name, mode)
 
         for data_set in ['train', 'validation', 'test']:
             i = 0
 
             for X, y in repsly_data.read_batch(batch_size=batch_size, data_set=data_set):
-                np.testing.assert_array_equal(X.shape, expected_X_shape)
-                np.testing.assert_array_equal(y.shape, expected_y_shape)
-                i = i + 1
+                read_size = y.shape[0]
+                if read_size is batch_size:
+                    np.testing.assert_array_equal(X.shape, expected_X_shape)
+                    np.testing.assert_array_equal(y.shape, expected_y_shape)
+                else:
+                    self.assertLess(read_size, batch_size)
+                    self.assertGreater(read_size, 0)
+                i = i + read_size
 
             self.assertEqual(i, expected_length[data_set])
 
@@ -180,7 +184,7 @@ class TestRepslyData(TestCase):
                                   expected_y_shape=expected_y_shape)
 
     def test_read_batch_fast(self):
-        for batch_size in range(10):
+        for batch_size in range(1, 10):
             expected_length = {
                 (self.ten_users_file, 'FC'):
                     {'train': 8,
@@ -194,12 +198,11 @@ class TestRepslyData(TestCase):
             }
 
             expected_X_shape = {
-                'FC': [self.batch_size_fast, 1 + 15 * 16],
-                'CONV': [self.batch_size_fast, 16, 16]
+                'FC': [batch_size, 1 + 15 * 16],
+                'CONV': [batch_size, 16, 16]
             }
 
             expected_y_shape = batch_size
-            batch_size = batch_size
 
             self._test_read_batch_dispatch(expected_length, batch_size, expected_X_shape, expected_y_shape)
 

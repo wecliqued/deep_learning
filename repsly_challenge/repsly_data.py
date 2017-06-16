@@ -102,7 +102,7 @@ class RepslyData:
                 yield X[shuffle[i * batch_size:(i + 1) * batch_size], :], \
                       y[shuffle[i * batch_size:(i + 1) * batch_size]]
             if no_of_data % batch_size > 0:
-                yield X[shuffle[-no_of_data % batch_size:], :], \
-                      y[shuffle[-no_of_data % batch_size:]]
+                yield X[shuffle[-(no_of_data % batch_size):], :], \
+                      y[shuffle[-(no_of_data % batch_size):]]
             once = True
 
