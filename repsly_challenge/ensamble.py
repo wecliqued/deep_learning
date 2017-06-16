@@ -53,8 +53,9 @@ class Ensamble:
         net = net_cls()
         for _ in range(no_of_nets):
             sampled_arch = self.sample(arch)
+            sampled_learning_dict = self.sample(learning_dict)
             # create net (check parameters if nothing else)
-            net.create_net(sampled_arch, **learning_dict)
+            net.create_net(sampled_arch, **sampled_learning_dict)
             net_dict = {'name': net.name_extension(),
                         'net_cls': net_cls,
                         'data': data,
