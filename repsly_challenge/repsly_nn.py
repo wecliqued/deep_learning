@@ -179,7 +179,8 @@ class RepslyNN:
 
                     # finally, do the backpropagation and update the variables
                     sess.run(self.optimizer, feed_dict=train_feed_dict)
-            return global_step, self._calculate_stats(data, batch_size, 'validation', sess)
+            stats = self._calculate_stats(data, batch_size, 'validation', sess)
+            return global_step, stats
 
     ################################################################################################################
     #

@@ -66,6 +66,7 @@ class Ensamble:
 
     def train_all(self, train_dict):
         for net_dict in self.nets:
+            print('#'*80)
             net_cls = net_dict['net_cls']
             arch = net_dict['arch']
 
@@ -76,5 +77,6 @@ class Ensamble:
             # train and save latest stats
             train_dict['data'] = net_dict['data']
             global_step, stats = net.train(**train_dict)
+            print(stats)
             net_dict['global_step'] = global_step
             net_dict['stats'] = stats
