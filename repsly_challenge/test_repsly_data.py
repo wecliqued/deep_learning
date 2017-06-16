@@ -209,13 +209,13 @@ class TestRepslyData(TestCase):
     def test_read_batch_slow(self):
         expected_length = {
             (self.file_name, 'FC'): {
-                'train': self.train_size_slow // self.batch_size_slow,
-                'validation': self.val_size_slow // self.batch_size_slow,
-                'test': self.test_size_slow // self.batch_size_slow},
+                'train': self.train_size_slow,
+                'validation': self.val_size_slow,
+                'test': self.test_size_slow},
             (self.file_name, 'CONV'): {
-                'train': self.train_size_slow // self.batch_size_slow,
-                'validation': self.val_size_slow // self.batch_size_slow,
-                'test': self.test_size_slow // self.batch_size_slow
+                'train': self.train_size_slow,
+                'validation': self.val_size_slow,
+                'test': self.test_size_slow
             }
         }
 
