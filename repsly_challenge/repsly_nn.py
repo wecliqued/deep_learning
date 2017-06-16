@@ -146,6 +146,7 @@ class RepslyNN:
         :param skip_steps: number of steps to make before writing summaries out
         '''
 
+        start = time.time()
         with tf.Session() as sess:
             # restore checkpoint if possible
             # if not, initialize variables and start from beginning
@@ -153,7 +154,6 @@ class RepslyNN:
             if not self._restore_checkpoint(sess):
                 sess.run(tf.global_variables_initializer())
 
-            start = time.time()
             for i in range(epochs):
                 train_read_batch = data.read_batch(batch_size, 'train')
                 validation_read_batch = data.read_batch(batch_size, 'validation', endless=True)
