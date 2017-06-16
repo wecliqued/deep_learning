@@ -63,6 +63,7 @@ class Ensamble:
                         'global_step': 0,
                         'stats': None}
             self.nets.append(net_dict)
+            print(net_dict['name'])
 
     def train_all(self, train_dict):
         for net_dict in self.nets:
