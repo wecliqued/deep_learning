@@ -9,7 +9,10 @@ from repsly_data import RepslyData
 class TestRepslyFC(TestCase):
     def setUp(self):
         self.repsly_fc = RepslyFC()
-        self.arch = [(100, False), (200, False)]
+
+        self.archs = {'without_batch_norm': ((111, False), (237, False)),
+                      'mixed_batch_norm': ((33, True), (37, False)),
+                      'with_batch_norm': ((193, True), (117, True))}
 
         self.arch_dict = {'keep_prob': 0.8, 'input_keep_prob': 0.9, 'batch_norm_decay': 0.9}
 
@@ -23,14 +26,33 @@ class TestRepslyFC(TestCase):
         self.data.read_data(ten_users_file, 'FC')
         self.batch_size = 1
 
-    def expected_num_variables(self):
+    def print_trainable_variables(self):
+        size = tf.Dimension(0)
+        print('*' * 80)
+        for v in tf.trainable_variables():
+            print('{}[{}]'.format(v.name, v.shape))
+            size += np.prod(v.shape)
+        print('TOTAL SIZE: {}\n{}'.format(size, '*' * 80))
+
+    def expected_num_trainable_variables(self, arch):
         input_size = 241
         num_variables = 0
-        for hidden_size, use_batch_normalization in self.arch:
-            num_variables += (input_size+1) * hidden_size
-            input_size = hidden_size
+        for hidden_size, use_batch_normalization in arch:
             if use_batch_normalization:
-                num_variables += 2*hidden_size
+                # each neuron has input_size weights,
+                # but no bias because it is disabled by biases_initializer=None
+                # in tf.contrib.layers.fully_connected()
+                num_variables += input_size * hidden_size
+                # each neuron has one learnable parameter beta,
+                # but no learnable parameter gamma because it is disabled by scale=False
+                # in tf.contrib.layers.batch_norm (not needed for ReLU)
+                num_variables += hidden_size
+            else:
+                # each neuron has input_size weights and one bias
+                num_variables += (input_size + 1) * hidden_size
+            input_size = hidden_size
+
+        # last layer is a linear classifier: input_size weights and one bias
         num_variables += (input_size+1) * 2
 
         return num_variables
@@ -42,14 +64,16 @@ class TestRepslyFC(TestCase):
 
     def test__create_model(self):
         repsly_nn = self.repsly_fc
-        arch = self.arch
+        for arch_name, arch in self.archs.items():
+            # drop everything created so far
+            tf.reset_default_graph()
 
-        repsly_nn._create_placeholders()
+            repsly_nn._create_placeholders()
 
-        # one of the easiest sanity checks is the number of variables created
-        self.assertEqual(repsly_nn.get_num_of_variables(), 0)
-        repsly_nn._create_model(arch)
-        self.assertEqual(repsly_nn.get_num_of_variables(), self.expected_num_variables())
+            # one of the easiest sanity checks is the number of variables created
+            self.assertEqual(repsly_nn.get_num_of_trainable_variables(), 0)
+            repsly_nn._create_model(arch)
+            self.assertEqual(repsly_nn.get_num_of_trainable_variables(), self.expected_num_trainable_variables(arch))
 
     def _test__calculate_f1_score(self, repsly_nn):
         tp, fp, tn, fn = 2, 3, 5, 7
@@ -66,7 +90,7 @@ class TestRepslyFC(TestCase):
 
     def test_create_net(self):
         repsly_nn = self.repsly_fc
-        arch = self.arch
+        arch = self.archs['mixed_batch_norm']
         arch_dict = self.arch_dict
 
         repsly_nn.create_net(arch, arch_dict)
@@ -80,7 +104,7 @@ class TestRepslyFC(TestCase):
 
     def test_train(self):
         repsly_nn = self.repsly_fc
-        arch = self.arch
+        arch = self.archs['mixed_batch_norm']
         arch_dict = self.arch_dict
         data = self.data
         batch_size = self.batch_size
@@ -93,7 +117,7 @@ class TestRepslyFC(TestCase):
 
     def test_checkpoint_save_and_restore(self):
         repsly_nn = self.repsly_fc
-        arch = self.arch
+        arch = self.archs['mixed_batch_norm']
         arch_dict = self.arch_dict
         data = self.data
         batch_size = self.batch_size
@@ -103,7 +127,7 @@ class TestRepslyFC(TestCase):
         repsly_nn.create_net(arch, arch_dict)
 
         # check that all variables are created
-        self.assertEqual(repsly_nn.get_num_of_variables(), self.expected_num_variables())
+        self.assertEqual(repsly_nn.get_num_of_trainable_variables(), self.expected_num_trainable_variables(arch))
 
         # create feed dictionary for loss calculation
         batch = next(read_batch)

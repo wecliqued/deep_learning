@@ -7,7 +7,7 @@ class RepslyNN:
     def __init__(self):
         pass
 
-    def get_num_of_variables(self):
+    def get_num_of_trainable_variables(self):
         '''
         This is very useful for sanity checking. If you have a wrong idea of how many variables you are using,
         something is very wrong (with you or with the code).
@@ -279,7 +279,7 @@ class RepslyFC(RepslyNN):
         if use_batch_normalization:
             # matmul -> batch_norm without scale -> ReLU -> dropout
             h = tf.contrib.layers.fully_connected(input, num_outputs, activation_fn=None, biases_initializer=None)
-            h = tf.contrib.layers.batch_norm(h, decay=self.batch_norm_decay, is_training=self.is_training, activation_fn=tf.nn.relu)
+            h = tf.contrib.layers.batch_norm(h, decay=self.batch_norm_decay, scale=False, is_training=self.is_training, activation_fn=tf.nn.relu)
             h = tf.nn.dropout(h, keep_prob=self.keep_prob)
             return h
             # old stuff - todo: remove
