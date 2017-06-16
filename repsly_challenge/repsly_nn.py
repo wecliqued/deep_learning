@@ -160,8 +160,8 @@ class RepslyNN:
                 for train_batch in train_read_batch:
                     train_feed_dict = self._create_feed_dictionary(train_batch, is_training=True)
                     # calculate current loss without updating variables
-                    iteration, train_loss = sess.run([self.global_step, self.loss], feed_dict=train_feed_dict)
-                    if iteration % skip_steps == 0:
+                    global_step, train_loss = sess.run([self.global_step, self.loss], feed_dict=train_feed_dict)
+                    if global_step % skip_steps == 0:
                         # write train summary
                         train_feed_dict = self._create_feed_dictionary(train_batch, is_training=False)
                         train_loss = self._add_summary(sess, train_feed_dict, 'train')
@@ -175,11 +175,11 @@ class RepslyNN:
 
                         # printout losses
                         print('[{:05d}/{:.1f} sec]   train/validation loss = {:.5f}/{:.5f}'.\
-                              format(iteration, time.time() - start, train_loss, validation_loss))
+                              format(global_step, time.time() - start, train_loss, validation_loss))
 
                     # finally, do the backpropagation and update the variables
                     sess.run(self.optimizer, feed_dict=train_feed_dict)
-            return self._calculate_stats(data, batch_size, 'validation', sess)
+            return global_step, self._calculate_stats(data, batch_size, 'validation', sess)
 
     ################################################################################################################
     #
