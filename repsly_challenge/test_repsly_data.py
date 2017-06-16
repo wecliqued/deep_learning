@@ -3,6 +3,7 @@ from repsly_data import RepslyData
 
 import csv
 import numpy as np
+import pandas as pd
 
 class TestRepslyData(TestCase):
     def setUp(self):
@@ -225,3 +226,12 @@ class TestRepslyData(TestCase):
         batch_size = self.batch_size_slow
 
         self._test_read_batch_dispatch(expected_length, batch_size, expected_X_shape, expected_y_shape)
+
+    def test_read_user_data_pandas(self):
+        repsly_data = self.repsly_data
+        for X, y in repsly_data.read_user_data_pandas(self.file_name):
+            self.assertIsNotNone(X)
+            self.assertIsNotNone(y)
+            self.assertIsInstance(X, pd.DataFrame)
+            self.assertIsInstance(y, int)
+            self.assertEqual(X.shape, (16, 16))
