@@ -109,7 +109,7 @@ class TestRepslyFC(TestCase):
 
         self._test__calculate_f1_score(repsly_nn)
 
-        print('_name_extension():', repsly_nn._name_extension())
+        print('name_extension():', repsly_nn.name_extension())
 
         # todo: finish test :)
 #        self.fail()

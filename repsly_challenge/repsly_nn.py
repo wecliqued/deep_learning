@@ -187,14 +187,14 @@ class RepslyNN:
     #
     ################################################################################################################
 
-    def _name_extension(self):
-        desc = {type(self).__name__: ''}
+    def name_extension(self):
+        desc = {type(self).__name__: None}
         desc.update(self.arch)
         desc.update({
             'lr': str(self.learning_rate),
             'dr': str(self.decay_rate),
             'ds': str(self.decay_steps)})
-        return os.path.join(*['{}-{}'.format(k, desc[k]).replace(" ", "").replace('[', '(').replace(']', ')') for k in desc.keys()])
+        return os.path.join(*[('{}-{}' if (desc[k] is not None) else '{}').format(k, desc[k]).replace(" ", "").replace('[', '(').replace(']', ')') for k in desc.keys()])
 
     def _create_summaries(self):
         with tf.name_scope('summaries'):
@@ -210,7 +210,7 @@ class RepslyNN:
     def _create_summary_writers(self):
         self._create_summaries()
         graph = tf.get_default_graph()
-        name_extension = self._name_extension()
+        name_extension = self.name_extension()
         modes = ['train', 'validation']
 
         self.summary_writer = {mode: tf.summary.FileWriter(os.path.join('graphs', mode, name_extension), graph) for mode in modes}
@@ -227,7 +227,7 @@ class RepslyNN:
     ################################################################################################################
 
     def _create_checkpoint_saver(self):
-        self.checkpoint_namebase = os.path.join('checkpoints', self._name_extension(), 'checkpoint')
+        self.checkpoint_namebase = os.path.join('checkpoints', self.name_extension(), 'checkpoint')
         self.checkpoint_path = os.path.dirname(self.checkpoint_namebase)
         os.makedirs(self.checkpoint_path, exist_ok=True)
         print('Checkpoint directory is:', os.path.abspath(self.checkpoint_path))
