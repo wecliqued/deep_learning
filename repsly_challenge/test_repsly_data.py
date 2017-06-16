@@ -229,7 +229,7 @@ class TestRepslyData(TestCase):
 
     def test_read_user_data_pandas(self):
         repsly_data = self.repsly_data
-        for X, y in repsly_data.read_user_data_pandas(self.file_name):
+        for X, y in repsly_data.read_user_data_pandas(self.two_users_file):
             self.assertIsNotNone(X)
             self.assertIsNotNone(y)
             self.assertIsInstance(X, pd.DataFrame)
