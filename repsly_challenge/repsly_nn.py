@@ -209,16 +209,23 @@ class RepslyNN:
             self.summary = tf.summary.merge_all()
 
     def _create_summary_writers(self):
+        modes = ['train', 'validation']
+
+        # close old summary writers
+        if self.summary_writer is not None:
+            for mode in modes:
+                self.summary_writer[mode].close()
+
         self._create_summaries()
         graph = tf.get_default_graph()
         name_extension = self.name_extension()
-        modes = ['train', 'validation']
 
         self.summary_writer = {mode: tf.summary.FileWriter(os.path.join('graphs', mode, name_extension), graph) for mode in modes}
 
     def _add_summary(self, sess, feed_dict, mode):
         loss, summary, global_step = sess.run([self.loss, self.summary, self.global_step], feed_dict=feed_dict)
         self.summary_writer[mode].add_summary(summary, global_step=global_step)
+        self.summary_writer[mode].flush()
         return loss
 
     ################################################################################################################
