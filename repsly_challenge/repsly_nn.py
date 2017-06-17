@@ -5,8 +5,8 @@ import time
 
 class RepslyNN:
     def __init__(self):
+        self.modes = ['train', 'validation']
         self.summary_writer = None
-        pass
 
     def get_num_of_trainable_variables(self):
         '''
@@ -180,6 +180,7 @@ class RepslyNN:
 
                     # finally, do the backpropagation and update the variables
                     sess.run(self.optimizer, feed_dict=train_feed_dict)
+            self._flush_summaries()
             stats = self._calculate_stats(data, batch_size, 'validation', sess)
             return global_step, stats
 
@@ -210,7 +211,7 @@ class RepslyNN:
             self.summary = tf.summary.merge_all()
 
     def _create_summary_writers(self):
-        modes = ['train', 'validation']
+        modes = self.modes
 
         # close old summary writers
         if self.summary_writer is not None:
@@ -226,8 +227,11 @@ class RepslyNN:
     def _add_summary(self, sess, feed_dict, mode):
         loss, summary, global_step = sess.run([self.loss, self.summary, self.global_step], feed_dict=feed_dict)
         self.summary_writer[mode].add_summary(summary, global_step=global_step)
-        self.summary_writer[mode].flush()
         return loss
+
+    def _flush_summaries(self):
+        for mode in self.modes:
+            self.summary_writer[mode].flush()
 
     ################################################################################################################
     #
