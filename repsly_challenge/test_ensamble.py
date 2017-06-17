@@ -110,10 +110,11 @@ class TestEnsamble(TestCase):
         ens = self.ens
         ens.nets = self.nets
 
-        nets = ens.nets_by_key_stat(key='f1_score')
-        scores = [score for score, _ in nets]
-        self.assertEqual(len(nets), 2)
-        np.testing.assert_array_equal(sorted(scores, reverse=True), scores)
+        for key in ['f1_score', 'loss', 'accuracy', 'precision', 'recall']:
+            for reverse in [True, False]:
+                nets = ens.nets_by_key_stat(key=key, reverse=reverse)
+                scores = [net['stats'][key] for net in nets]
+                np.testing.assert_array_equal(sorted(scores, reverse=not reverse), scores)
 
     def test_untrained_nets(self):
         ens = self.ens

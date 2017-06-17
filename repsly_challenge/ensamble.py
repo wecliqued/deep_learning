@@ -77,9 +77,14 @@ class Ensamble:
 
         return net_dict, net
 
-    def nets_by_key_stat(self, key='f1_score'):
-        key_n_nets = [(net['stats'][key], net['arch']) for net in self.nets if net['stats'] is not None]
-        return sorted(key_n_nets, reverse=True, key=itemgetter(0))
+    # todo: make it pretty :)
+    def nets_by_key_stat(self, key, reverse=False):
+        key_n_nets = [(net['stats'][key], net) for net in self.nets if net['stats'] is not None]
+        sorted_nets = sorted(key_n_nets, reverse=not reverse, key=itemgetter(0))
+        return [net for score, net in sorted_nets]
+
+    def key_stat(self, nets, key):
+        return [(net['stats'][key], net['arch']) for net in nets]
 
     def untrained_nets(self):
         return list(filter(lambda net: net['stats'] is None, self.nets))
@@ -110,5 +115,5 @@ class Ensamble:
     def train_untrained(self, train_dict):
         return self._train(self.untrained_nets(), train_dict)
 
-    def train_top_nets_by_key_stat(self, key, no_of_networks, train_dict):
-        return self._train(self.nets_by_key_stat(key)[:no_of_networks], train_dict)
+    def train_top_nets_by_key_stat(self, key, no_of_networks, train_dict, reverse=False):
+        return self._train(self.nets_by_key_stat(key, reverse)[:no_of_networks], train_dict)
