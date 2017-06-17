@@ -9,6 +9,57 @@ from repsly_data import RepslyData
 
 class TestEnsamble(TestCase):
     def setUp(self):
+        self.nets = [{'arch': {'batch_norm_decay': 0.95999999999999996,
+                               'hidden_size': 184,
+                               'input_keep_prob': 0.85,
+                               'keep_prob': 0.8,
+                               'no_of_layers': 5,
+                               'use_batch_norm': True},
+                      'data': None,
+                      'global_step': 1099,
+                      'learning_dict': {'decay_rate': 0.999,
+                                        'decay_steps': 20,
+                                        'learning_rate': 0.00020000000000000001},
+                      'name': 'RepslyFC/no_of_layers-5/hidden_size-184/use_batch_norm-True/keep_prob-0.8/input_keep_prob-0.85/batch_norm_decay-0.96/lr-0.0002/dr-0.999/ds-20',
+                      'net_cls': RepslyFC,
+                      'stats': {'accuracy': 0.93093894675925926,
+                                'f1_score': 0.63564603240548401,
+                                'loss': 0.23691272735595703,
+                                'precision': 0.90909090909090917,
+                                'recall': 0.495}},
+                     {'arch': {'batch_norm_decay': 0.97999999999999998,
+                               'hidden_size': 67,
+                               'input_keep_prob': 0.88,
+                               'keep_prob': 0.72,
+                               'no_of_layers': 6,
+                               'use_batch_norm': True},
+                      'data': None,
+                      'global_step': 1099,
+                      'learning_dict': {'decay_rate': 0.999,
+                                        'decay_steps': 20,
+                                        'learning_rate': 0.00029999999999999997},
+                      'name': 'RepslyFC/no_of_layers-6/hidden_size-67/use_batch_norm-True/keep_prob-0.72/input_keep_prob-0.88/batch_norm_decay-0.98/lr-0.0003/dr-0.999/ds-20',
+                      'net_cls': RepslyFC,
+                      'stats': {'accuracy': 0.92235243055555549,
+                                'f1_score': 0.57839721254355403,
+                                'loss': 0.25847414880990982,
+                                'precision': 0.8315412186379928,
+                                'recall': 0.44582043343653249}},
+                     {'arch': {'batch_norm_decay': 0.94999999999999996,
+                               'hidden_size': 132,
+                               'input_keep_prob': 0.92,
+                               'keep_prob': 0.75,
+                               'no_of_layers': 4,
+                               'use_batch_norm': True},
+                      'data': None,
+                      'global_step': 1099,
+                      'learning_dict': {'decay_rate': 0.999,
+                                        'decay_steps': 20,
+                                        'learning_rate': 0.0001},
+                      'name': 'RepslyFC/no_of_layers-4/hidden_size-132/use_batch_norm-True/keep_prob-0.75/input_keep_prob-0.92/batch_norm_decay-0.95/lr-0.0001/dr-0.999/ds-20',
+                      'net_cls': RepslyFC,
+                      'stats': None}
+                     ]
 
         self.ens = Ensamble()
 
@@ -55,6 +106,22 @@ class TestEnsamble(TestCase):
             self.assertGreaterEqual(sampled_arch['batch_norm_decay'], 0.9)
             self.assertLessEqual(sampled_arch['batch_norm_decay'], 0.99)
 
+    def test_nets_by_key_stat(self):
+        ens = self.ens
+        ens.nets = self.nets
+
+        nets = ens.nets_by_key_stat(key='f1_score')
+        scores = [score for score, _ in nets]
+        self.assertEqual(len(nets), 2)
+        np.testing.assert_array_equal(sorted(scores, reverse=True), scores)
+
+    def test_untrained_nets(self):
+        ens = self.ens
+        ens.nets = self.nets
+
+        nets = ens.untrained_nets()
+        self.assertEqual(len(nets), 1)
+
     def test_add_and_train_all_nets(self):
         arch = {
                 'no_of_layers': {'lin': (3, 6)},
@@ -77,11 +144,33 @@ class TestEnsamble(TestCase):
         ens = self.ens
         data = RepslyData()
 
+        self.assertEqual(len(ens.nets_by_key_stat(key='f1_score')), 0)
+        self.assertEqual(len(ens.untrained_nets()), 0)
         ens.add_nets(RepslyFC, arch=arch, data=data, learning_dict=learning_dict, no_of_nets=2)
-        print(ens.nets)
+        self.assertEqual(len(ens.nets_by_key_stat(key='f1_score')), 0)
+        self.assertEqual(len(ens.untrained_nets()), 2)
 
         # you must read data before using it
         data.read_data('data/trial_users_analysis.csv', mode='FC')
 
         # train
-        ens.train_all(train_dict)
+        i = ens.train_all(train_dict)
+        self.assertEqual(i, 2)
+        self.assertEqual(len(ens.nets_by_key_stat(key='f1_score')), 2)
+        self.assertEqual(len(ens.untrained_nets()), 0)
+
+        i = ens.train_untrained(train_dict)
+        self.assertEqual(i, 0)
+        self.assertEqual(len(ens.nets_by_key_stat(key='f1_score')), 2)
+        self.assertEqual(len(ens.untrained_nets()), 0)
+
+        i = ens.train_top_nets_by_key_stat('f1_score', 3, train_dict)
+        self.assertEqual(i, 2)
+        self.assertEqual(len(ens.nets_by_key_stat(key='f1_score')), 2)
+        self.assertEqual(len(ens.untrained_nets()), 0)
+
+        i = ens.train_top_nets_by_key_stat('f1_score', -1, train_dict)
+        self.assertEqual(i, 1)
+        self.assertEqual(len(ens.nets_by_key_stat(key='f1_score')), 2)
+        self.assertEqual(len(ens.untrained_nets()), 0)
+
