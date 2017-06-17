@@ -49,35 +49,47 @@ class Ensamble:
         # do nothing by default
         return x
 
+    def _create_net(self, net_dict):
+        net_cls = net_dict['net_cls']
+        arch = net_dict['arch']
+        learning_dict = net_dict['learning_dict']
+
+        # create net
+        net = net_cls()
+        net.create_net(arch, **learning_dict)
+
+        return net
+
+    def _sample_net_dict(self, net_cls, arch, data, learning_dict):
+        sampled_arch = self.sample(arch)
+        sampled_learning_dict = self.sample(learning_dict)
+
+        net_dict = {'net_cls': net_cls,
+                    'arch': sampled_arch,
+                    'data': data,
+                    'learning_dict': sampled_learning_dict,
+                    'global_step': 0,
+                    'stats': None}
+
+        net = self._create_net(net_dict)
+        net_dict['name'] = net.name_extension()
+
+        return net_dict, net
+
     def add_nets(self, net_cls, arch, data, learning_dict, no_of_nets):
         net = net_cls()
         for _ in range(no_of_nets):
-            sampled_arch = self.sample(arch)
-            sampled_learning_dict = self.sample(learning_dict)
-            # create net (check parameters if nothing else)
-            net.create_net(sampled_arch, **sampled_learning_dict)
-            net_dict = {'name': net.name_extension(),
-                        'net_cls': net_cls,
-                        'data': data,
-                        'arch': sampled_arch,
-                        'global_step': 0,
-                        'stats': None}
+            # create net and summary writer (check parameters if nothing else)
+            net_dict, _ = self._sample_net_dict(net_cls, arch, data, learning_dict)
             self.nets.append(net_dict)
             print(net_dict['name'])
 
     def train_all(self, train_dict):
         for net_dict in self.nets:
             print('#'*80)
-            net_cls = net_dict['net_cls']
-            arch = net_dict['arch']
-
-            # create net
-            net = net_cls()
-            net.create_net(arch)
-
-            # train and save latest stats
-            train_dict['data'] = net_dict['data']
-            global_step, stats = net.train(**train_dict)
+            net = self._create_net(net_dict)
+#            train_dict['data'] = net_dict['data']
+            global_step, stats = net.train(**train_dict, data=net_dict['data'])
             print(stats)
             net_dict['global_step'] = global_step
             net_dict['stats'] = stats
