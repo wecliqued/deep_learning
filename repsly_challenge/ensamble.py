@@ -88,8 +88,7 @@ class Ensamble:
         for net_dict in self.nets:
             print('#'*80)
             net = self._create_net(net_dict)
-#            train_dict['data'] = net_dict['data']
-            global_step, stats = net.train(**train_dict, data=net_dict['data'])
+            global_step, stats = net.train(data=net_dict['data'], **train_dict)
             print(stats)
             net_dict['global_step'] = global_step
             net_dict['stats'] = stats
