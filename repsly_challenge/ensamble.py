@@ -84,7 +84,13 @@ class Ensamble:
         return [net for score, net in sorted_nets]
 
     def key_stat(self, nets, key):
-        return [(net['stats'][key], net['arch']) for net in nets]
+        return [(net['stats'][key], net['arch'], net['learning_dict'], net['global_step']) for net in nets]
+
+    def print_stat_by_key(self, key, reverse=False):
+        print('*' * 110)
+        for value, arch, learning_dict, global_step in self.key_stat(self.nets_by_key_stat(key, reverse=reverse), key):
+            print('{}={}   arch={}'.format(key, value, arch))
+        print('*' * 110)
 
     def untrained_nets(self):
         return list(filter(lambda net: net['stats'] is None, self.nets))

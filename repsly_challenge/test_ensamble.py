@@ -159,6 +159,7 @@ class TestEnsamble(TestCase):
         self.assertEqual(i, 2)
         self.assertEqual(len(ens.nets_by_key_stat(key='f1_score')), 2)
         self.assertEqual(len(ens.untrained_nets()), 0)
+        ens.print_stat_by_key('f1_score')
 
         i = ens.train_untrained(train_dict)
         self.assertEqual(i, 0)
