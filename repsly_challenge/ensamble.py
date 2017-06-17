@@ -89,7 +89,7 @@ class Ensamble:
     def print_stat_by_key(self, key, reverse=False):
         print('*' * 110)
         for value, arch, learning_dict, global_step in self.key_stat(self.nets_by_key_stat(key, reverse=reverse), key):
-            print('{}={}   arch={}'.format(key, value, arch))
+            print('{}={}\tarch={}\tlearning_dict={}\tstep={}'.format(key, value, arch, learning_dict, global_step))
         print('*' * 110)
 
     def untrained_nets(self):
