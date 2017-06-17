@@ -5,6 +5,7 @@ import time
 
 class RepslyNN:
     def __init__(self):
+        self.summary_writer = None
         pass
 
     def get_num_of_trainable_variables(self):
