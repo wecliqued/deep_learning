@@ -30,7 +30,7 @@ class Ensamble:
 
                 # round to integer if needed
                 if isinstance(low, int) and isinstance(high, int):
-                    retval = round(retval)
+                    retval = int(round(retval))
                 elif len(x[key]) is 3:
                     precision = x[key][2]
                     retval = round(retval, precision)

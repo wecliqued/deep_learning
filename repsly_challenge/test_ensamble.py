@@ -74,6 +74,13 @@ class TestEnsamble(TestCase):
         a = np.array([self.ens.sample(x) for i in range(10000)])
         np.testing.assert_approx_equal(np.median(a), np.exp(np.mean(np.log(x['log']))), significant=1)
 
+    def test_sample_range_int(self):
+        for mode in ['lin', 'log']:
+            for i in range(100):
+                x = {mode: (1, 10000)}
+                a = self.ens.sample(x)
+                self.assertIsInstance(a, int)
+
     def test_sample_range_inv_log(self):
         x = {'inv-log' : (0.9, 0.999)}
         a = np.array([self.ens.sample(x) for i in range(10000)])
