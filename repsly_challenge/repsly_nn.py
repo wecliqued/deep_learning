@@ -288,13 +288,13 @@ class RepslyFC(RepslyNN):
     def _fully_connected_layer_with_dropout_and_batch_norm(self, input, num_outputs, use_batch_normalization):
         # skip bias if we are using batch normalization
         if use_batch_normalization:
-            # matmul -> batch_norm without scale -> ReLU -> dropout
+            # matmul -> batch_norm without scale -> ReLU
             h = tf.contrib.layers.fully_connected(input, num_outputs, activation_fn=None, biases_initializer=None)
             h = tf.contrib.layers.batch_norm(h, decay=self.batch_norm_decay, scale=False, is_training=self.is_training, activation_fn=tf.nn.relu)
-            h = tf.nn.dropout(h, keep_prob=self.keep_prob)
-            return h
         else:
-            return tf.contrib.layers.fully_connected(input, num_outputs)
+            h = tf.contrib.layers.fully_connected(input, num_outputs)
+        h = tf.nn.dropout(h, keep_prob=self.keep_prob)
+        return h
 
     def _create_model(self, arch):
         '''
