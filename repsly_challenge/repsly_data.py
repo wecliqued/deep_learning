@@ -1,4 +1,4 @@
-import csv
+import pandas as pd
 from datetime import datetime
 import numpy as np
 
@@ -6,69 +6,37 @@ class RepslyData:
     def __init__(self):
         pass
 
-    def _string_to_datetime(self, s):
-        return datetime.strptime(s, '%Y-%m-%d')
-
-    def _string_to_days(self, s, first_date):
-        return (self._string_to_datetime(s) - self._string_to_datetime(first_date)).days
-
-    def _convert_row_to_int(self, columns_dict, data_indexes, trial_started, row, first_date):
-        # convert all strings into int
-        row_data = np.zeros_like(row, dtype=int)
-        for i in data_indexes:
-            if i is columns_dict[trial_started]:
-                # convert Date to int
-                row_data[i] = self._string_to_days(row[i], first_date)
-            else:
-                row_data[i] = int(row[i])
-        return row_data
-
-    def _read_user_data(self, mycsv, num_of_rows=16, user_columns='UserID', day_column='TrialDate', trial_started='TrialStarted', purchased_column='Purchased', ignore_columns=['Edition'], first_date='2016-01-01'):
-        columns = next(mycsv)
-        columns_dict = {columns[i]: i for i in range(len(columns))}
-
-        num_of_columns = len(columns) - len(ignore_columns) - 3 # UserID, Purchased, TrialDate
-
-        data_columns = [c for c in columns if c not in (np.concatenate([ignore_columns, [user_columns, day_column, purchased_column]]))]
-        # check that trial_started is the first column
-        assert(data_columns[0] == trial_started)
-        data_indexes = [columns_dict[c] for c in data_columns]
-
-        X, y = None, 0
-        for row in mycsv:
-            day = int(row[columns_dict[day_column]])
-            if day is 0:
-                # yield if you have something
-                if X is not None:
-                    yield X, y
-                # allocate and initialize new output data
-                X = np.zeros([num_of_rows, num_of_columns], dtype=np.int)
-                y = int(row[columns_dict['Purchased']])
-
-            row_data = self._convert_row_to_int(columns_dict, data_indexes, trial_started, np.array(row), first_date)
-            X[day] = row_data[data_indexes]
-
-        if X is not None:
-            yield X, y
-
-    def _prepare_data(self, file_name, mode):
+    def _prepare_data(self, file_name, mode='FC'):
         assert(mode in ['FC', 'CONV'])
         self.X_all, self.y_all = None, None
-        with open(file_name) as f:
-            mycsv = csv.reader(f)
-            for X, y in self._read_user_data(mycsv):
-                # the first column is a trial start day and there is no need to repeat it
-                # the rest are columns that are possibly different each day and we will flatten them
-                if mode is 'FC':
-                    trial_start_day = X[0, 0]
-                    repeating_columns =  np.reshape(X[:, 1:], [-1])
-                    X = np.concatenate([[trial_start_day], repeating_columns])
-                if self.X_all is None:
-                    X_all_shape = np.concatenate([[0], X.shape])
-                    self.X_all = np.zeros(X_all_shape)
-                    self.y_all = np.array([], dtype=np.int)
-                self.X_all = np.concatenate([self.X_all, [X]])
-                self.y_all = np.concatenate([self.y_all, [y]])
+
+        # load the dataset, create data frame from csv with all columns
+        df = pd.read_csv(file_name)
+
+        # prepare X
+        # create index for columns that need to be casted to 15 trial days
+        col_index = [0] + list(range(4, len(df.columns)))
+
+        # cast the data columns into new X_all data frame
+        X = df.iloc[:, col_index].pivot(index='UserID', columns='TrialDate')
+
+        # insert new TrialStarted column and bind it with the rest of the X_all columns
+        X.insert(0, 'TrialStarted', df.iloc[:, [0, 3]].groupby(
+            'UserID').TrialStarted.unique().str[0])
+
+        # convert TrialStarted column from string type to timestamp
+        X['TrialStarted'] = pd.to_datetime(X["TrialStarted"])
+
+        # subtract TrialStarted from first date
+        first_date = datetime.strptime('2016-01-01', '%Y-%m-%d')
+        X['TrialStarted'] = (X['TrialStarted'] - first_date).dt.days.astype(
+            'int64')
+
+        # prepare y
+        y = df.iloc[:, [0, 1]].groupby('UserID').Purchased.unique().str[0]
+
+        # convert X and y to numpy arrays
+        self.X_all, self.y_all = X.values, y.values
 
     def read_data(self, file_name, mode, train_size=0.8):
         self._prepare_data(file_name, mode) # mode = 'FC' or 'CONV'
