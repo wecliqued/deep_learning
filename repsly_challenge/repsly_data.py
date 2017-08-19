@@ -1,76 +1,51 @@
 import pandas as pd
-from datetime import datetime
 import numpy as np
 
-class RepslyData:
+from batch_reader import BatchReader
+
+class RepslyData(BatchReader):
     def __init__(self):
         pass
 
-    def _prepare_data(self, file_name, mode='FC'):
-        assert(mode in ['FC', 'CONV'])
-        self.X_all, self.y_all = None, None
+    def _prepare_data(self, **params):
+        # the only param is input file name so it is passed directly as a string
+        file_name = params['file_name']
 
         # load the dataset, create data frame from csv with all columns
         df = pd.read_csv(file_name)
 
-        # prepare X
+        # check that input file is formatted as expected
+        expected_columns = ['UserID', 'Purchased', 'Edition', 'TrialStarted', 'TrialDate', 'ActiveReps',
+                            'ActivitiesPerRep', 'MessagesCnt', 'AuditsCnt', 'ClientNotesCnt', 'FormsCnt',
+                            'NewPlaceCnt', 'OrdersCnt', 'PhotosCnt', 'StatusChangedCnt', 'WorkdayStartCnt',
+                            'ScheduleCnt', 'ScheduledRepsCnt', 'ScheduledPlacesCnt', 'ImportCnt']
+        assert np.array_equal(df.columns, expected_columns)
+
         # create index for columns that need to be casted to 15 trial days
         col_index = [0] + list(range(4, len(df.columns)))
 
         # cast the data columns into new X_all data frame
-        X = df.iloc[:, col_index].pivot(index='UserID', columns='TrialDate')
+        trial_data = df.iloc[:, col_index].pivot(index='UserID', columns='TrialDate')
+        # flatten the columns index because of the concat operation bellow
+        trial_data.columns = range(len(trial_data.columns))
 
-        # insert new TrialStarted column and bind it with the rest of the X_all columns
-        X.insert(0, 'TrialStarted', df.iloc[:, [0, 3]].groupby(
-            'UserID').TrialStarted.unique().str[0])
+        # all other columns are grouped by UserID
+        group = df.iloc[:, :4].groupby('UserID')
 
-        # convert TrialStarted column from string type to timestamp
-        X['TrialStarted'] = pd.to_datetime(X["TrialStarted"])
-
+        # extract TrialStarted columns and convert it to datetime
+        trial_started = group.TrialStarted.unique().str[0]
+        trial_started = pd.to_datetime(trial_started)
         # subtract TrialStarted from first date
-        first_date = datetime.strptime('2016-01-01', '%Y-%m-%d')
-        X['TrialStarted'] = (X['TrialStarted'] - first_date).dt.days.astype(
-            'int64')
+        first_date = pd.datetime(2016, 1, 1)
+        trial_started = (trial_started - first_date).dt.days
 
-        # prepare y
-        y = df.iloc[:, [0, 1]].groupby('UserID').Purchased.unique().str[0]
+        # extract purchased from the group
+        purchased = group.Purchased.unique().str[0]
 
-        # convert X and y to numpy arrays
-        self.X_all, self.y_all = X.values, y.values
+        # concatenate everything into one table indexed by UserID and case all data into floats
+        data = pd.concat([trial_started, trial_data, purchased], axis=1).astype(float)
 
-    def read_data(self, file_name, mode, train_size=0.8):
-        self._prepare_data(file_name, mode) # mode = 'FC' or 'CONV'
-        no_of_data = self.X_all.shape[0]
-        no_of_train_data = round(no_of_data * train_size)
-        no_of_validation_data = round(no_of_data * ((1.0-train_size) / 2))
-        no_of_test_data = no_of_data - (no_of_train_data-no_of_validation_data)
+        # finally, split into X and y and convert into numpy array
+        all_X, all_y = data.iloc[:, :-1].values, data.iloc[:, -1].values
 
-        np.random.seed(0)
-        ix = np.random.permutation(no_of_data)
-
-        self.X, self.y = {}, {}
-
-        self.X['train'] = self.X_all[ix[:no_of_train_data], :]
-        self.y['train'] = self.y_all[ix[:no_of_train_data]]
-
-        self.X['validation'] = self.X_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data], :]
-        self.y['validation'] = self.y_all[ix[no_of_train_data:no_of_train_data+no_of_validation_data]]
-
-        self.X['test'] = self.X_all[ix[no_of_train_data+no_of_validation_data:], :]
-        self.y['test'] = self.y_all[ix[no_of_train_data+no_of_validation_data:]]
-
-    def read_batch(self, batch_size, data_set='train', endless=False):
-        no_of_data = self.X[data_set].shape[0]
-        X, y = self.X[data_set], self.y[data_set]
-
-        once = False
-        while (endless or not once):
-            shuffle = np.random.permutation(no_of_data)
-            for i in range(no_of_data // batch_size):
-                yield X[shuffle[i * batch_size:(i + 1) * batch_size], :], \
-                      y[shuffle[i * batch_size:(i + 1) * batch_size]]
-            if no_of_data % batch_size > 0:
-                yield X[shuffle[-(no_of_data % batch_size):], :], \
-                      y[shuffle[-(no_of_data % batch_size):]]
-            once = True
-
+        return all_X, all_y

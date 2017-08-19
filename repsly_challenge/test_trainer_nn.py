@@ -2,13 +2,12 @@ from unittest import TestCase
 import tensorflow as tf
 import numpy as np
 
-from repsly_nn import RepslyFC
-from repsly_data import RepslyData
+from trainer_nn import TrainerFF
+from test_batch_reader import DummyBatchReaader
 
-
-class TestRepslyFC(TestCase):
+class TestTrainer(TestCase):
     def setUp(self):
-        self.repsly_fc = RepslyFC()
+        self.trainer = TrainerFF(input_size=241)
 
         self.archs = {
             'without_batch_norm': {
@@ -17,6 +16,7 @@ class TestRepslyFC(TestCase):
                 'use_batch_norm': False,
                 'keep_prob': 0.8,
                 'input_keep_prob': 0.9},
+
             'with_batch_norm': {
                 'no_of_layers': 4,
                 'hidden_size': 137,
@@ -26,15 +26,9 @@ class TestRepslyFC(TestCase):
                 'batch_norm_decay': 0.95},
         }
 
-        np.random.seed(0)
-        self.X = np.random.randint(0-4, 4, [3, 241])
-        self.y = np.random.randint(0, 1, [3])
-        self.keep_prob = 0.9
-
-        ten_users_file = 'data/trial_ten_users.csv'
-        self.data = RepslyData()
-        self.data.read_data(ten_users_file, 'FC')
-        self.batch_size = 1
+        self.data = DummyBatchReaader()
+        self.data.read_data(X_shape=(231, 241), y_shape=(231, ))
+        self.batch_size = 31
 
     def print_trainable_variables(self):
         size = tf.Dimension(0)
@@ -71,80 +65,80 @@ class TestRepslyFC(TestCase):
         return num_variables
 
     def test__create_placeholders(self):
-        repsly_nn = self.repsly_fc
+        trainer = self.trainer
 
-        X, y, keep_prob = repsly_nn._create_placeholders()
+        X, y, keep_prob = trainer._create_placeholders()
 
     def test__create_model(self):
-        repsly_nn = self.repsly_fc
+        trainer = self.trainer
         for arch_name, arch in self.archs.items():
             # drop everything created so far
             tf.reset_default_graph()
 
-            repsly_nn._create_placeholders()
+            trainer._create_placeholders()
 
             # one of the easiest sanity checks is the number of variables created
-            self.assertEqual(repsly_nn.get_num_of_trainable_variables(), 0)
-            repsly_nn._create_model(arch)
-            self.assertEqual(repsly_nn.get_num_of_trainable_variables(), self.expected_num_trainable_variables(arch))
+            self.assertEqual(trainer.get_num_of_trainable_variables(), 0)
+            trainer._create_model(arch)
+            self.assertEqual(trainer.get_num_of_trainable_variables(), self.expected_num_trainable_variables(arch))
 
-    def _test__calculate_f1_score(self, repsly_nn):
+    def _test__calculate_f1_score(self, trainer):
         tp, fp, tn, fn = 2, 3, 5, 7
-        feed_dict = {repsly_nn.prediction: [1]*(tp+fp)   + [0]*(tn+fn),
-                     repsly_nn.y:          [1]*tp+[0]*fp + [0]*tn+[1]*fn
+        feed_dict = {trainer.prediction: [1]*(tp+fp)   + [0]*(tn+fn),
+                     trainer.y:          [1]*tp+[0]*fp + [0]*tn+[1]*fn
         }
         precision = tp / (tp+fp)
         recall = tp / (tp+fn)
         expected_f1_score = 2 * precision * recall / (precision+recall)
         with tf.Session() as sess:
-            f1_score = sess.run(repsly_nn.f1_score, feed_dict)
+            f1_score = sess.run(trainer.f1_score, feed_dict)
             self.assertEqual(f1_score, expected_f1_score)
 
 
     def test_create_net(self):
-        repsly_nn = self.repsly_fc
+        trainer = self.trainer
         arch = self.archs['with_batch_norm']
 
-        repsly_nn.create_net(arch)
+        trainer.create_net(arch)
 
-        self._test__calculate_f1_score(repsly_nn)
+        self._test__calculate_f1_score(trainer)
 
-        print('name_extension():', repsly_nn.name_extension())
+        print('name_extension():', trainer.name_extension())
 
         # todo: finish test :)
 #        self.fail()
 
     def test_train(self):
-        repsly_nn = self.repsly_fc
+        trainer = self.trainer
         arch = self.archs['with_batch_norm']
         data = self.data
         batch_size = self.batch_size
 
-        repsly_nn.create_net(arch)
-        repsly_nn.train(data, batch_size, epochs=2)
+        trainer.create_net(arch)
+        trainer.train(data, batch_size, epochs=2)
 
         # todo: finish test :)
 #        self.fail()
 
     def test_checkpoint_save_and_restore(self):
-        repsly_nn = self.repsly_fc
+        trainer = self.trainer
         arch = self.archs['with_batch_norm']
         data = self.data
         batch_size = self.batch_size
         read_batch = data.read_batch(batch_size)
 
         # create network
-        repsly_nn.create_net(arch)
+        trainer.create_net(arch)
 
         # check that all variables are created
-        self.assertEqual(repsly_nn.get_num_of_trainable_variables(), self.expected_num_trainable_variables(arch))
+        self.assertEqual(trainer.get_num_of_trainable_variables(), self.expected_num_trainable_variables(arch))
 
         # create feed dictionary for loss calculation
         batch = next(read_batch)
-        feed_dict = repsly_nn._create_feed_dictionary(batch, is_training=False)
+        feed_dict = trainer._create_feed_dictionary(batch, is_training=False)
 
         # Saver must be created *after* variables are created, otherwise it will fail
-        repsly_nn._create_checkpoint_saver()
+        trainer._create_checkpoint_saver()
 
         # first, we will create session and initialize variables
         # and then we will run one batch and calculate loss
@@ -153,17 +147,17 @@ class TestRepslyFC(TestCase):
             # initialize global variables
             sess1.run(tf.global_variables_initializer())
 
-            loss1 = sess1.run(repsly_nn.loss, feed_dict=feed_dict)
+            loss1 = sess1.run(trainer.loss, feed_dict=feed_dict)
             print('loss1:', loss1)
 
-            saved_path = repsly_nn._save_checkpoint(sess1)
+            saved_path = trainer._save_checkpoint(sess1)
             self.assertIsNotNone(saved_path)
 
         with tf.Session() as sess2:
-            restored = repsly_nn._restore_checkpoint(sess2)
+            restored = trainer._restore_checkpoint(sess2)
             self.assertTrue(restored)
 
-            loss2 = sess2.run(repsly_nn.loss, feed_dict=feed_dict)
+            loss2 = sess2.run(trainer.loss, feed_dict=feed_dict)
             print('loss2:', loss2)
 
             self.assertEqual(loss1, loss2)
