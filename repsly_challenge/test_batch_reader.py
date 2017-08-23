@@ -2,6 +2,7 @@ from unittest import TestCase
 import numpy as np
 from batch_reader import BatchReader
 from math import ceil
+import tensorflow as tf
 
 class DummyBatchReaader(BatchReader):
     def _prepare_data(self, **params):
@@ -83,3 +84,22 @@ class TestBatchReader(TestCase):
         np.testing.assert_array_equal(all_X.sort(), batch_reader.all_X.sort())
         np.testing.assert_array_equal(all_y.sort(), batch_reader.all_y.sort())
 
+    def test_read_data(self):
+        # todo: finish the test
+        pass
+
+    def test_input_fn(self):
+        batch_reader = DummyBatchReaader()
+
+        # read  data
+        batch_reader.read_data(X_shape=(53, 7), y_shape=(53, ), train_set_percentage=.8)
+
+        for data_set in ['train', 'validation', 'test']:
+            input_fn = batch_reader.input_fn(batch_size=128, data_set=data_set)
+
+            X, y = input_fn()
+            np.testing.assert_array_equal([dim.value for dim in X['x'].shape], (None, 7))
+            np.testing.assert_array_equal([dim.value for dim in y.shape], (None, ))
+
+        # todo: check that you have read all the data
+        pass

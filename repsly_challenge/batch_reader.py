@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import tensorflow as tf
 
 class BatchReader:
     def __init__(self):
@@ -45,6 +45,19 @@ class BatchReader:
 
         self.all_X, self.all_y = self._prepare_data(**params)
         self.data = self._partition_into_data_sets(self.all_X, self.all_y, train_set_percentage)
+
+    def input_fn(self, batch_size, data_set='train'):
+        '''
+        Input function to be used by tf.estimator.Estimator subclasses
+
+        :param batch_size: size of the batch
+        :param data_set: one of 'train', 'validation' or 'test'
+
+        :return: function returning
+        '''
+        X, y = self.data[data_set]
+        shuffle = (data_set == 'train')
+        return tf.estimator.inputs.numpy_input_fn(x={'x': X}, y=y, batch_size=batch_size, shuffle=shuffle)
 
     def read_batch(self, batch_size, data_set='train', endless=False):
         '''
